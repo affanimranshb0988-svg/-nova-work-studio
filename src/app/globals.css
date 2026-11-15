@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root { --nova: #6d3df5; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; min-height: 100vh; color: #f2edff;
+  background:
+    radial-gradient(900px 480px at 85% -5%, rgba(167, 60, 255, 0.22), transparent 60%),
+    radial-gradient(700px 420px at -10% 25%, rgba(109, 61, 245, 0.20), transparent 55%),
+    linear-gradient(180deg, #150826 0%, #0d0716 55%, #090512 100%);
+  background-attachment: fixed;
+  font-family: ui-sans-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+[dir="rtl"], [lang="ur"] { font-family: "Noto Nastaliq Urdu", serif; line-height: 2.1; }
+.card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02));
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgba(0,0,0,0.35);
+}
+.inp {
+  width: 100%; border-radius: 12px; border: 1px solid rgba(167,139,250,0.25);
+  background: rgba(0,0,0,0.35); color: #f5f1ff; padding: 10px 12px; font-size: 14px; outline: none;
+}
+.inp:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.25); }
+select.inp option { background: #1a0f33; }
+.lbl { display: block; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: #c9b8ff; margin-bottom: 5px; }
+.btn-primary {
+  border-radius: 12px; padding: 11px 18px; font-weight: 700; font-size: 14px; color: #fff; border: 0; cursor: pointer;
+  background: linear-gradient(90deg, #6d3df5, #b03df0); box-shadow: 0 10px 26px rgba(109,61,245,0.35);
+}
+.btn-primary:disabled { opacity: .55; cursor: wait; }
+.btn-ghost {
+  border-radius: 12px; padding: 9px 14px; font-weight: 600; font-size: 13px; color: #e6defc; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(167,139,250,0.22);
+}
+.btn-ghost:hover { background: rgba(139,92,246,0.18); }
+@media print {
+  body { background: #fff !important; }
+  aside, header, .print\:hidden { display: none !important; }
+}
