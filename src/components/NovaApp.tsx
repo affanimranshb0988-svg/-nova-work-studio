@@ -88,7 +88,7 @@ export default function NovaApp() {
 
   const ctx: Ctx = { user, plan, isPro, settings, goto, toast, refreshUser, bumpUsage, usage, carryPrompt, setCarryPrompt, installPrompt, guestChat, setGuestChat };
 
-  if (!authReady) return <div className="grid min-h-screen place-items-center"><div className="text-center"><div className="text-5xl text-violet-400">✦</div><p className="mt-3 text-violet-200/70">Loading Nova Work Studio…</p></div></div>;
+  if (!authReady) return <div className="grid min-h-screen place-items-center"><div className="text-center"><div className="text-5xl text-violet-400">✦</div><p className="mt-3 text-violet-200/70">Loading Novster Work Studio…</p></div></div>;
   if (!user && !guest) return <AuthScreen onAuthed={(u) => { setUser(u); }} onGuest={() => setGuest(true)} />;
 
   const badge = !user ? "Guest" : user.proExpired ? "Pro expired" : isPro ? "Pro" : "Free";
@@ -99,7 +99,7 @@ export default function NovaApp() {
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 -translate-x-full bg-[#150b28]/95 backdrop-blur transition lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${menuOpen ? "translate-x-0" : ""} border-r border-violet-500/15 flex flex-col`}>
         <div className="flex items-center gap-3 px-5 py-5">
           <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-2xl text-white shadow-lg shadow-violet-900/50">✦</div>
-          <div><p className="font-bold leading-tight text-white">Nova Work Studio</p><p className="text-xs text-violet-300/70">Version 2.0 · Pro Edition</p></div>
+          <div><p className="font-bold leading-tight text-white">Novster Work Studio</p><p className="text-xs text-violet-300/70">Version 2.0 · Pro Edition</p></div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3">
           {NAV.filter((n) => n.id !== "api" || user?.isAdmin).map((n, i) => (
@@ -125,7 +125,7 @@ export default function NovaApp() {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-violet-500/15 bg-[#0d0716]/85 px-4 py-3 backdrop-blur">
           <button className="rounded-lg bg-violet-500/15 px-3 py-2 text-white lg:hidden" onClick={() => setMenuOpen(true)}>☰</button>
-          <button onClick={() => goto("chat")} className="flex items-center gap-2 lg:hidden"><span className="text-xl text-violet-400">✦</span><span className="font-bold text-white">Nova Studio</span></button>
+          <button onClick={() => goto("chat")} className="flex items-center gap-2 lg:hidden"><span className="text-xl text-violet-400">✦</span><span className="font-bold text-white">Novster</span></button>
           <div className="ml-auto flex items-center gap-2">
             <span className={`rounded-full px-3 py-1 text-xs font-bold ${badge === "Pro" ? "bg-emerald-500/20 text-emerald-300" : badge === "Pro expired" ? "bg-red-500/20 text-red-300" : "bg-violet-500/20 text-violet-200"}`}>{badge}{user && !isPro && !user.proExpired ? "" : ""}</span>
             {user && <span className="hidden text-xs text-violet-200/60 sm:block">{usage.chat !== undefined ? `Chat today: ${usage.chat ?? 0}${isPro ? "" : `/${settings.limit_free_chat || 20}`}` : ""}</span>}
@@ -194,7 +194,7 @@ export function AuthScreen({ onAuthed, onGuest }: { onAuthed: (u: SafeUser) => v
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-4xl text-white shadow-xl shadow-violet-950/60">✦</div>
-          <h1 className="mt-4 text-3xl font-extrabold text-white">Nova Work Studio <span className="text-violet-400">2.0</span></h1>
+          <h1 className="mt-4 text-3xl font-extrabold text-white">Novster Work Studio <span className="text-violet-400">2.0</span></h1>
           <p className="mt-2 text-sm text-violet-200/70">Chat, prompts, invoices & khata, content calendar, CV maker and 10 daily tools — with AI built in. Just sign up and start.</p>
         </div>
         <div className="card p-6">

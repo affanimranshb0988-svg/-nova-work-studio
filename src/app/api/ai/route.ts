@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   }
 
   const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${c.key}` };
-  if (c.baseUrl.includes("openrouter")) { headers["HTTP-Referer"] = "https://nova-work-studio.app"; headers["X-Title"] = "Nova Work Studio"; }
+  if (c.baseUrl.includes("openrouter")) { headers["HTTP-Referer"] = "https://nova-work-studio.app"; headers["X-Title"] = "Novster Work Studio"; }
 
   try {
     if (action === "chat") {

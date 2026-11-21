@@ -5,16 +5,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://novaworkstudio-zeta.vercel.app"),
   alternates: { canonical: "https://novaworkstudio-zeta.vercel.app/" },
-  title: "Nova Work Studio",
+  title: "Novster Work Studio",
   description: "All-in-one AI work studio: Chat Bot, Prompts, 10 daily Tools (Invoice & Khata, Content Calendar, CV Maker, WhatsApp Kit), Create, Image Generate, Database & Deploy. Free and Pro plans.",
   manifest: "/manifest.json",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Nova Studio", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Novster", statusBarStyle: "black-translucent" },
   openGraph: {
-    title: "Nova Work Studio",
+    title: "Novster Work Studio",
     description: "Chat Bot, Prompts, 10 daily Tools, Create, Image Generate, Database & Deploy. Free and Pro plans.",
     url: "https://novaworkstudio-zeta.vercel.app",
-    siteName: "Nova Work Studio",
+    siteName: "Novster Work Studio",
     type: "website",
   },
 };
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              name: "Nova Work Studio",
+              name: "Novster Work Studio",
               url: "https://novaworkstudio-zeta.vercel.app",
             }),
           }}

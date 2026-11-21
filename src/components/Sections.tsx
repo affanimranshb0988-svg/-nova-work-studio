@@ -308,7 +308,7 @@ export function CreateSection({ ctx }: { ctx: Ctx }) {
     if (!JSZip) { ctx.toast("ZIP library unavailable — use Download instead."); return; }
     const zip = new JSZip();
     zip.file(p.kind === "website" ? "index.html" : p.kind === "sheet" ? "sheet.csv" : "document.txt", p.content);
-    zip.file("README.md", `# ${p.name}\n\nCreated with Nova Work Studio 2.0.\nPrompt: ${p.prompt}\n`);
+    zip.file("README.md", `# ${p.name}\n\nCreated with Novster Work Studio 2.0.\nPrompt: ${p.prompt}\n`);
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${p.name.replace(/\W+/g, "-")}.zip`; a.click();
   };
@@ -463,7 +463,7 @@ export function DeploySection({ ctx }: { ctx: Ctx }) {
     const home = await probe("/"); out.push({ label: "Home page returns 200", ok: !!home && home.ok, detail: home ? `HTTP ${home.status}` : "no response" });
     const man = await probe("/manifest.json");
     let manOk = false, manDetail = "unreachable";
-    if (man) { try { const j = await man.json(); manOk = j.name === "Nova Work Studio" && j.short_name === "Nova Studio" && j.display === "standalone"; manDetail = manOk ? "name/short_name/display correct" : "fields incorrect"; } catch { manDetail = "invalid JSON"; } }
+    if (man) { try { const j = await man.json(); manOk = j.name === "Novster Work Studio" && j.short_name === "Novster" && j.display === "standalone"; manDetail = manOk ? "name/short_name/display correct" : "fields incorrect"; } catch { manDetail = "invalid JSON"; } }
     out.push({ label: "Manifest valid", ok: !!(man && man.ok && manOk), detail: manDetail });
     let swOk = false; try { const reg = await navigator.serviceWorker?.getRegistration(); swOk = !!reg?.active; } catch {}
     out.push({ label: "Service worker registered & active", ok: swOk, detail: swOk ? "active" : "not active yet — reload once" });
@@ -482,7 +482,7 @@ export function DeploySection({ ctx }: { ctx: Ctx }) {
   const install = async () => {
     const dp = ctx.installPrompt as unknown as { prompt?: () => Promise<void> } | null;
     if (dp?.prompt) { await dp.prompt(); return; }
-    ctx.toast(/iphone|ipad/i.test(navigator.userAgent) ? "iOS: tap Share → Add to Home Screen to install Nova Studio." : "Install prompt not available yet — use the browser menu → Install app / Add to Home Screen.");
+    ctx.toast(/iphone|ipad/i.test(navigator.userAgent) ? "iOS: tap Share → Add to Home Screen to install Novster." : "Install prompt not available yet — use the browser menu → Install app / Add to Home Screen.");
   };
 
   const exportZip = async () => {
@@ -491,7 +491,7 @@ export function DeploySection({ ctx }: { ctx: Ctx }) {
     if (!JSZip) { ctx.toast("ZIP library unavailable."); return; }
     const zip = new JSZip();
     zip.file(project.kind === "website" ? "index.html" : project.kind === "sheet" ? "sheet.csv" : "document.txt", project.content);
-    zip.file("README.md", `# ${project.name} — Deploy Guide\n\nCreated with Nova Work Studio 2.0.\n\n## Publish anywhere\n1. Netlify Drop: drag this folder at app.netlify.com/drop\n2. Vercel: run \"npx vercel\" in this folder\n3. GitHub Pages: push index.html to a repo and enable Pages\n\nNova does not invent a live URL — your host will give you the real one after publishing.\n`);
+    zip.file("README.md", `# ${project.name} — Deploy Guide\n\nCreated with Novster Work Studio 2.0.\n\n## Publish anywhere\n1. Netlify Drop: drag this folder at app.netlify.com/drop\n2. Vercel: run \"npx vercel\" in this folder\n3. GitHub Pages: push index.html to a repo and enable Pages\n\nNova does not invent a live URL — your host will give you the real one after publishing.\n`);
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "deploy-ready.zip"; a.click();
   };
