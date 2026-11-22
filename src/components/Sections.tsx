@@ -48,44 +48,86 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   const uid = ctx.user?.id ?? null;
   const active = chats.find((c) => c.id === activeId) || null;
   const msgs = active?.msgs ?? [];
+  // Ref mirror of chats: event handlers and the in-flight send() must always
+  // see the latest list, never a stale render closure (the old code lost or
+  // resurrected chats when two writes happened close together).
+  const chatsRef = useRef<Chat[]>([]);
+  const uidRef = useRef<number | null>(uid);
+  uidRef.current = uid;
+  // Counts local commits since this mount; a late async load must never
+  // overwrite chats the user already created in this session.
+  const commitGenRef = useRef(0);
+  const busyRef = useRef(false);
+  const sortChats = (list: Chat[]) => [...list].sort((a, b) => b.updatedAt - a.updatedAt);
+  const commitChats = (next: Chat[]) => {
+    const sorted = sortChats(next);
+    commitGenRef.current += 1;
+    chatsRef.current = sorted;
+    setChats(sorted);
+    saveCollection("chats-v2", uidRef.current, sorted);
+  };
 
   useEffect(() => {
-    loadCollection<string[]>("memory", uid, []).then(setMemory);
+    let cancelled = false;
+    const genAtMount = commitGenRef.current;
+    loadCollection<string[]>("memory", uid, []).then((m) => { if (!cancelled) setMemory(m); });
     loadCollection<Chat[]>("chats-v2", uid, []).then(async (saved) => {
-      if (saved && saved.length) { setChats(saved); setActiveId(saved[0].id); return; }
-      // Migrate the old single conversation (pre-v6) into the first chat — nothing is lost.
-      const legacy = await loadCollection<Msg[]>("chat-history", uid, []);
-      if (legacy && legacy.length) {
-        const c: Chat = { id: newChatId(), title: autoTitle(legacy), msgs: legacy, updatedAt: Date.now() };
-        setChats([c]); setActiveId(c.id); saveCollection("chats-v2", uid, [c]);
+      if (cancelled || commitGenRef.current !== genAtMount) return; // user already chatted here — never clobber
+      let list = Array.isArray(saved) ? [...saved] : [];
+      // Adopt chats made as a guest before login — they used to vanish.
+      if (uid) {
+        const guestChats = ls<Chat[]>("nova:guest:chats-v2", []);
+        if (guestChats.length) {
+          const ids = new Set(list.map((c) => c.id));
+          list = [...list, ...guestChats.filter((c) => c && c.id && !ids.has(c.id))];
+          try { localStorage.removeItem("nova:guest:chats-v2"); } catch {}
+        }
       }
+      if (!list.length) {
+        // Migrate the old single conversation (pre-v6) into the first chat — nothing is lost.
+        const legacy = await loadCollection<Msg[]>("chat-history", uid, []);
+        if (cancelled || commitGenRef.current !== genAtMount) return;
+        if (legacy && legacy.length) {
+          list = [{ id: newChatId(), title: autoTitle(legacy), msgs: legacy, updatedAt: Date.now() }];
+        }
+      }
+      if (!list.length) return;
+      const sorted = sortChats(list);
+      chatsRef.current = sorted;
+      setChats(sorted);
+      setActiveId(sorted[0].id);
+      setShowChats(true); // history visible by default once chats exist
+      if (sorted.length !== (saved?.length ?? 0)) saveCollection("chats-v2", uid, sorted);
     });
+    return () => { cancelled = true; };
   }, [uid]); // eslint-disable-line
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
   const blocked = !ctx.isPro && ctx.plan === "guest" && ctx.guestChat >= Number(ctx.settings.limit_guest_chat || 5);
   const freeBlocked = !ctx.isPro && !!ctx.user && (ctx.usage.chat ?? 0) >= Number(ctx.settings.limit_free_chat || 20);
 
-  const persistChats = (next: Chat[]) => { setChats(next); saveCollection("chats-v2", uid, next); };
+  const persistChats = (next: Chat[]) => commitChats(next);
   const writeMsgs = (targetId: string, next: Msg[]) => {
-    const base = chats.some((c) => c.id === targetId) ? chats : [{ id: targetId, title: "New chat", msgs: [] as Msg[], updatedAt: Date.now() }, ...chats];
-    persistChats(base.map((c) => c.id === targetId ? { ...c, msgs: next, title: c.title === "New chat" ? autoTitle(next) : c.title, updatedAt: Date.now() } : c));
+    const cur = chatsRef.current;
+    const base = cur.some((c) => c.id === targetId) ? cur : [{ id: targetId, title: "New chat", msgs: [] as Msg[], updatedAt: Date.now() }, ...cur];
+    commitChats(base.map((c) => c.id === targetId ? { ...c, msgs: next, title: next.length === 0 ? "New chat" : c.title === "New chat" ? autoTitle(next) : c.title, updatedAt: Date.now() } : c));
   };
-  const startNewChat = () => { const c: Chat = { id: newChatId(), title: "New chat", msgs: [], updatedAt: Date.now() }; persistChats([c, ...chats]); setActiveId(c.id); setShowChats(false); };
-  const deleteChat = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this chat? This cannot be undone.")) return; const n = chats.filter((c) => c.id !== id); persistChats(n); if (activeId === id) setActiveId(n[0]?.id ?? null); };
-  const renameChat = (id: string) => { const c = chats.find((x) => x.id === id); if (!c) return; const name = typeof window !== "undefined" ? window.prompt("Chat name:", c.title) : null; if (!name || !name.trim()) return; persistChats(chats.map((x) => x.id === id ? { ...x, title: name.trim().slice(0, 60) } : x)); };
+  const startNewChat = () => { const c: Chat = { id: newChatId(), title: "New chat", msgs: [], updatedAt: Date.now() }; commitChats([c, ...chatsRef.current]); setActiveId(c.id); setShowChats(false); };
+  const deleteChat = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this chat? This cannot be undone.")) return; const n = sortChats(chatsRef.current.filter((c) => c.id !== id)); commitChats(n); if (activeId === id) setActiveId(n[0]?.id ?? null); };
+  const renameChat = (id: string) => { const c = chatsRef.current.find((x) => x.id === id); if (!c) return; const name = typeof window !== "undefined" ? window.prompt("Chat name:", c.title) : null; if (!name || !name.trim()) return; commitChats(chatsRef.current.map((x) => x.id === id ? { ...x, title: name.trim().slice(0, 60) } : x)); };
   const visibleChats = chats.filter((c) => !query.trim() || c.title.toLowerCase().includes(query.trim().toLowerCase()));
 
   const send = async (text?: string) => {
-    const content = (text ?? input).trim(); if (!content || busy) return;
+    const content = (text ?? input).trim(); if (!content || busyRef.current) return;
+    busyRef.current = true; setBusy(true);
     const chk = await ctx.bumpUsage("chat");
-    if (!chk.allowed) { ctx.toast(chk.error || "Daily chat limit reached."); return; }
+    if (!chk.allowed) { busyRef.current = false; setBusy(false); ctx.toast(chk.error || "Daily chat limit reached."); return; }
     const targetId = active ? active.id : newChatId();
     if (!active) setActiveId(targetId);
-    const next = [...(active ? active.msgs : []), { role: "user", content }]; writeMsgs(targetId, next); setInput(""); setBusy(true);
+    const next = [...(active ? active.msgs : []), { role: "user", content }]; writeMsgs(targetId, next); setInput("");
     const sys = memory.length ? `Remember these facts about the user:\n${memory.map((m) => `- ${m}`).join("\n")}` : "";
     const res = await callAI([...(sys ? [{ role: "system", content: sys }] : []), ...next.slice(-14)]);
-    setBusy(false);
+    busyRef.current = false; setBusy(false);
     const done = res.ok ? [...next, { role: "assistant", content: res.text }] : [...next, { role: "assistant", content: `⚠️ ${res.error}` }];
     writeMsgs(targetId, done);
   };
@@ -185,7 +227,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
 }
 
 /* ---------------- PROMPTS ---------------- */
-type PromptItem = { name: string; body: string; category: string; vars: string[]; starred?: boolean };
+type PromptItem = { name: string; body: string; category: string; vars: string[]; starred?: boolean; v?: number };
 export function PromptsSection({ ctx }: { ctx: Ctx }) {
   const [items, setItems] = useState<PromptItem[]>([]);
   const [fillFor, setFillFor] = useState<PromptItem | null>(null);
@@ -195,8 +237,19 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
 
   useEffect(() => {
     loadCollection<PromptItem[]>("prompts", uid, []).then((saved) => {
-      const base = saved.length ? saved : STARTER_PROMPTS.map((s) => ({ ...s, starred: false }));
-      setItems(base); if (!saved.length) saveCollection("prompts", uid, base);
+      if (saved.length) {
+        // Upgrade previously saved short starters to the expanded v2 versions.
+        let changed = false;
+        const upgraded = saved.map((it) => {
+          const s = STARTER_PROMPTS.find((x) => x.name === it.name && x.category === it.category);
+          if (s && (it.v ?? 1) < 2) { changed = true; return { ...it, body: s.body, vars: s.vars, v: 2 }; }
+          return it;
+        });
+        setItems(upgraded); if (changed) saveCollection("prompts", uid, upgraded);
+        return;
+      }
+      const base = STARTER_PROMPTS.map((s) => ({ ...s, starred: false }));
+      setItems(base); saveCollection("prompts", uid, base);
     });
   }, [uid]); // eslint-disable-line
   const persist = (n: PromptItem[]) => { setItems(n); saveCollection("prompts", uid, n); };
