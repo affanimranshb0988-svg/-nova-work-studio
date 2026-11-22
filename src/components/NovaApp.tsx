@@ -1,11 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ls, setLs, todayKey, fmtDate, type SafeUser, type Settings } from "@/lib/client";
-import { ChatSection, PromptsSection, CreateSection, ImageSection, DatabaseSection, DeploySection } from "./Sections";
+import { ChatSection, PromptsSection, CreateSection, ImageSection, DeploySection } from "./Sections";
 import { ToolsHub } from "./Tools";
 import { PricingPage, AdminPage, AiServiceSection } from "./Pages";
 
-export type Section = "chat" | "prompts" | "tools" | "create" | "image" | "api" | "database" | "deploy" | "pricing" | "admin";
+export type Section = "chat" | "prompts" | "tools" | "create" | "image" | "api" | "deploy" | "pricing" | "admin";
 export type Ctx = {
   user: SafeUser; plan: "guest" | "free" | "pro"; isPro: boolean;
   settings: Settings;
@@ -22,7 +22,6 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: "create", label: "Create", icon: "🛠️" },
   { id: "image", label: "Image Generate", icon: "🎨" },
   { id: "api", label: "AI Service", icon: "🔑" },
-  { id: "database", label: "Database", icon: "🗄️" },
   { id: "deploy", label: "Deploy", icon: "🚀" },
 ];
 
@@ -84,7 +83,7 @@ export default function NovaApp() {
     return json as { allowed: boolean; used?: number; limit?: number | null; error?: string };
   }, [user, settings, guestChat, setGuestChat]);
 
-  const logout = async () => { await api("/api/auth", { method: "POST", body: JSON.stringify({ action: "logout" }) }); setUser(null); setGuest(false); setAccountOpen(false); toast("Logged out. Your cloud data is saved to your account."); };
+  const logout = async () => { await api("/api/auth", { method: "POST", body: JSON.stringify({ action: "logout" }) }); setUser(null); setGuest(false); setAccountOpen(false); toast("Logged out — your data is saved."); };
 
   const ctx: Ctx = { user, plan, isPro, settings, goto, toast, refreshUser, bumpUsage, usage, carryPrompt, setCarryPrompt, installPrompt, guestChat, setGuestChat };
 
@@ -117,7 +116,7 @@ export default function NovaApp() {
           </div>
         )}
         {isPro && user?.proUntil && <div className="mx-3 mb-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-xs text-emerald-200">✦ Pro active until {fmtDate(user.proUntil)}</div>}
-        <p className="px-5 pb-4 text-[11px] text-violet-300/40">Powered by Nova&apos;s built-in AI service — no keys needed.</p>
+        <p className="px-5 pb-4 text-[11px] text-violet-300/40">Powered by Novster&apos;s built-in AI — no keys needed.</p>
       </aside>
       {menuOpen && <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setMenuOpen(false)} />}
 
@@ -146,8 +145,8 @@ export default function NovaApp() {
           </div>
         </header>
 
-        {!user && <div className="mx-4 mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">You are in <b>Guest mode</b> — {settings.limit_guest_chat || 5} free chat messages, Tools locked. <button className="font-bold underline" onClick={() => setGuest(false)}>Create a free account</button> to save your work and sync across devices.</div>}
-        {user?.proExpired && <div className="mx-4 mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">Your Pro expired on {fmtDate(user.proUntil)}. You are on Free now — your saved data is intact. <button className="font-bold underline" onClick={() => goto("pricing")}>Renew Pro</button></div>}
+        {!user && <div className="mx-4 mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">Guest mode — {settings.limit_guest_chat || 5} free chats, Tools locked. <button className="font-bold underline" onClick={() => setGuest(false)}>Create a free account</button> to save your work.</div>}
+        {user?.proExpired && <div className="mx-4 mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">Pro expired {fmtDate(user.proUntil)} — your data is safe. <button className="font-bold underline" onClick={() => goto("pricing")}>Renew Pro</button></div>}
 
         <main className="mx-auto w-full max-w-6xl p-4 pb-24 sm:p-6">
           {section === "chat" && <ChatSection ctx={ctx} />}
@@ -156,7 +155,6 @@ export default function NovaApp() {
           {section === "create" && <CreateSection ctx={ctx} />}
           {section === "image" && <ImageSection ctx={ctx} />}
           {section === "api" && (user?.isAdmin ? <AiServiceSection ctx={ctx} /> : <div className="card p-8 text-center"><p className="text-lg font-bold text-white">Owner only</p><p className="mt-2 text-sm text-violet-200/70">The AI Service screen is only for the app owner.</p></div>)}
-          {section === "database" && <DatabaseSection ctx={ctx} />}
           {section === "deploy" && <DeploySection ctx={ctx} />}
           {section === "pricing" && <PricingPage ctx={ctx} />}
           {section === "admin" && (user?.isAdmin ? <AdminPage ctx={ctx} /> : <div className="card p-8 text-center"><p className="text-lg font-bold text-white">Admin is restricted</p><p className="mt-2 text-sm text-violet-200/70">This area is only for the app owner. If you are the owner, log in with the Admin email.</p></div>)}
@@ -194,8 +192,8 @@ export function AuthScreen({ onAuthed, onGuest }: { onAuthed: (u: SafeUser) => v
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-4xl text-white shadow-xl shadow-violet-950/60">✦</div>
-          <h1 className="mt-4 text-3xl font-extrabold text-white">Novster Work Studio <span className="text-violet-400">2.0</span></h1>
-          <p className="mt-2 text-sm text-violet-200/70">Chat, prompts, invoices & khata, content calendar, CV maker and 10 daily tools — with AI built in. Just sign up and start.</p>
+          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white">Novster Work Studio <span className="text-violet-400">2.0</span></h1>
+          <p className="mt-2 text-sm text-violet-200/70">Chat, tools, invoices, CVs & more — AI built in.</p>
         </div>
         <div className="card p-6">
           <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-black/30 p-1">
@@ -210,9 +208,9 @@ export function AuthScreen({ onAuthed, onGuest }: { onAuthed: (u: SafeUser) => v
           <button disabled={busy} onClick={submit} className="btn-primary mt-5 w-full">{busy ? "Please wait…" : mode === "signup" ? "Create free account" : "Log in"}</button>
           <button onClick={forgot} className="mt-3 w-full text-center text-sm text-violet-300 hover:underline">Forgot password?</button>
           <div className="my-4 flex items-center gap-3 text-xs text-violet-300/50"><span className="h-px flex-1 bg-violet-500/20" />or<span className="h-px flex-1 bg-violet-500/20" /></div>
-          <button disabled className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-violet-200/50" title="Owner must enable Google provider">Continue with Google — owner enables this in App Cloud settings</button>
+          <button disabled className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-violet-200/50" title="Owner must enable Google provider">Continue with Google — not enabled yet</button>
           <button onClick={onGuest} className="mt-3 w-full py-2 text-sm font-semibold text-violet-200 underline">Continue as guest →</button>
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-violet-300/50">Passwords are hashed on the server — the app never stores a raw password. No API keys needed — the AI service is built into the app.</p>
+          <p className="mt-4 text-center text-[11px] leading-relaxed text-violet-300/50">Passwords are hashed on the server. No API keys needed — AI is built in.</p>
         </div>
       </div>
     </div>

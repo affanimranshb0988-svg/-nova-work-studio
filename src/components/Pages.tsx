@@ -38,15 +38,14 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
     ["Invoice & Khata, Social Machine, CV, YouTube, Document AI, Voice", "—", "Pro only ✔"],
     ["Create projects", "Locked", `${s.limit_free_projects || 2} → Unlimited`],
     ["Image Generate", "Locked", `${s.limit_free_images || 3}/day → Unlimited`],
-    ["Database (My Data)", "Locked", `${s.limit_free_databases || 1} → Unlimited`],
     ["Deploy", "View only", "ZIP export → ZIP + publish flow"],
     ["Sync across devices", "No", "Yes"],
   ];
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">💎 Pricing & Upgrade</h1>
-      <p className="mt-1 text-sm text-violet-200/70">Manual approval only — no card checkout, no auto-renew claims. The owner confirms every payment.</p>
+      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">💎 Pricing & Upgrade</h1>
+      <p className="mt-1 text-sm text-violet-200/70">Manual approval only — no card checkout. The owner confirms every payment.</p>
 
       {ctx.user?.effectivePlan === "pro" && <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">✦ You are <b>Pro</b> — active until <b>{fmtDate(ctx.user.proUntil)}</b>. Renew below to extend from that date.</div>}
       {ctx.user?.proExpired && <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">Your Pro expired on {fmtDate(ctx.user.proUntil)} — renew below to unlock Pro tools again. Your data is intact.</div>}
@@ -58,7 +57,7 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
           <h3 className="text-lg font-extrabold text-white">Pro ✦</h3>
           <div className="mt-2 flex gap-2">{(["monthly", "yearly"] as const).map((p) => <button key={p} onClick={() => setPlanType(p)} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-bold ${planType === p ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{p === "monthly" ? `Monthly — PKR ${s.price_monthly_pkr || "500"} (~$${s.price_monthly_usd || "1.8"})` : `Yearly — PKR ${s.price_yearly_pkr || "4000"} (~$${s.price_yearly_usd || "14"})`}</button>)}</div>
           <ul className="mt-3 space-y-1.5 text-sm text-violet-100">{rows.map((r) => <li key={r[0]}>✦ {r[0]}: {r[2]}</li>)}</ul>
-          <p className="mt-2 text-[11px] text-violet-300/60">“Unlimited” still depends on your own AI provider&apos;s quota.</p>
+          <p className="mt-2 text-[11px] text-violet-300/60">“Unlimited” still depends on the AI provider&apos;s quota.</p>
         </div>
       </div>
 
@@ -72,7 +71,7 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
               <div className="rounded-xl bg-black/30 p-3"><p className="font-bold text-white">JazzCash</p><p className="text-violet-100">{s.jazzcash_number ? `${s.jazzcash_number} — ${s.jazzcash_title || ""}` : "Not set by owner yet (Admin → Settings)."}</p></div>
               <div className="rounded-xl bg-black/30 p-3"><p className="font-bold text-white">EasyPaisa</p><p className="text-violet-100">{s.easypaisa_number ? `${s.easypaisa_number} — ${s.easypaisa_title || ""}` : "Not set by owner yet (Admin → Settings)."}</p></div>
             </div>
-            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-violet-200/80"><li>Send PKR {planType === "monthly" ? (s.price_monthly_pkr || "500") : (s.price_yearly_pkr || "4000")} to the number above.</li><li>Note the <b>Transaction ID</b> from your receipt.</li><li>Submit the form — the owner approves manually (usually within a few hours). No instant fake success.</li></ol>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-violet-200/80"><li>Send PKR {planType === "monthly" ? (s.price_monthly_pkr || "500") : (s.price_yearly_pkr || "4000")} to the number above.</li><li>Note the <b>Transaction ID</b> from your receipt.</li><li>Submit the form — the owner approves manually (usually within a few hours).</li></ol>
             <div className="mt-3 flex gap-1.5">{(["jazzcash", "easypaisa"] as const).map((m) => <button key={m} onClick={() => setMethod(m)} className={`rounded-full px-4 py-2 text-sm font-semibold capitalize ${method === m ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{m}</button>)}</div>
             <label className="lbl mt-3">Your sending number</label><input className="inp" value={sender} onChange={(e) => setSender(e.target.value)} placeholder="03xx xxxxxxx" />
             <label className="lbl mt-3">Transaction ID</label><input className="inp" value={tid} onChange={(e) => setTid(e.target.value)} placeholder="From your payment receipt" />
@@ -91,7 +90,7 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
               <label className="lbl mt-4">I have a license key</label><input className="inp" value={license} onChange={(e) => setLicense(e.target.value)} placeholder="XXXX-XXXX-XXXX" />
               {licMsg && <p className="mt-2 rounded-xl bg-white/[0.06] px-3 py-2 text-sm text-violet-50">{licMsg}</p>}
               <button disabled={busy} className="btn-primary mt-3 w-full" onClick={verifyLicense}>{busy ? "Verifying with Gumroad…" : "Verify & Activate Pro"}</button>
-              <p className="mt-2 text-[11px] text-violet-300/60">Verified live with Gumroad&apos;s API. Invalid keys, timeouts or offline = no activation, honest error.</p>
+              <p className="mt-2 text-[11px] text-violet-300/60">Verified live with Gumroad&apos;s API.</p>
             </div>
 
             <div className="card mt-4 p-5">
@@ -99,7 +98,7 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
               {history.length === 0 && <p className="mt-2 text-sm text-violet-200/60">No requests yet.</p>}
               {history.map((r) => <div key={r.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-black/25 px-3 py-2 text-sm"><span className="flex-1 capitalize text-violet-50">{r.method} · {r.planType} · {new Date(r.createdAt).toLocaleString()}</span>
                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${r.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : r.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>{r.status === "approved" ? "Approved" : r.status === "rejected" ? "Rejected" : "Pending owner approval"}</span></div>)}
-              <p className="mt-2 text-[11px] text-violet-300/60">This app never claims money was received — only the owner confirms that by approving.</p>
+              <p className="mt-2 text-[11px] text-violet-300/60">Only the owner confirms payment by approving.</p>
             </div>
           </div>
         </div>
@@ -136,8 +135,8 @@ export function AdminPage({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">🛡️ Admin Panel <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
-      <p className="mt-1 text-sm text-violet-200/70">Visible only to the Admin email. Everyone else never sees this menu item.</p>
+      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🛡️ Admin Panel <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
+      <p className="mt-1 text-sm text-violet-200/70">Only the Admin email sees this.</p>
       {msg && <p className="mt-3 rounded-xl bg-violet-500/15 px-3 py-2 text-sm text-violet-50">{msg}</p>}
       <div className="mt-4 flex gap-1.5">{[["requests", `Upgrade Requests (${pending.length} pending)`], ["users", "Users"], ["settings", "Settings"], ["setup", "Owner Setup"]].map(([t, l]) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === t ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
 
@@ -160,14 +159,14 @@ export function AdminPage({ ctx }: { ctx: Ctx }) {
         <h3 className="font-extrabold text-white">Owner Setup checklist (honest pass/fail)</h3>
         {[
           ["App Cloud database connected", cloudOk === true, cloudOk === null ? "checking…" : cloudOk ? "/api/health OK — accounts, plans, counters, requests stored server-side" : "health check failed"],
-          ["Tables created (users, sessions, settings, requests, usage, data, licenses)", cloudOk === true, "Auto-created with the app schema in the same database"],
-          ["Auth working (email + password, hashed server-side)", true, "Sign up / log in / logout are live; sessions persist across reloads & devices"],
-          ["Admin email set", !!(st.admin_email), st.admin_email ? `Admin: ${st.admin_email}` : "Set ADMIN_EMAIL env or the Admin email in the Settings tab — until then nobody sees Admin"],
-          ["Central AI service (owner key)", !!(data.ai?.chatConfigured), data.ai?.chatConfigured ? `Chat AI is live for every user — today: ${data.ai.callsToday}/${data.ai.cap} calls used` : "Add your key in the AI Service screen (sidebar) — until then users see a 'being set up' notice"],
-          ["Central image service (Gemini key)", !!(data.ai?.imageConfigured), data.ai?.imageConfigured ? "Image generation is live for users within their plan limits" : "Optional — add the Gemini image key in AI Service"],
-          ["Payment numbers set (JazzCash / EasyPaisa)", !!(st.jazzcash_number || st.easypaisa_number), st.jazzcash_number || st.easypaisa_number ? "shown on the Upgrade page" : "Add in Settings tab — Upgrade page shows a 'not set' note until then"],
-          ["Gumroad product set", !!st.gumroad_permalink, st.gumroad_permalink ? `permalink: ${st.gumroad_permalink}` : "Optional — license flow shows 'not set up' until added"],
-          ["Google sign-in", false, "Requires an OAuth provider configured by the owner — honestly shown as not enabled in this build"],
+          ["Tables created (users, sessions, settings, requests, usage, data, licenses)", cloudOk === true, "Auto-created with the app schema"],
+          ["Auth working (email + password, hashed server-side)", true, "Sign up / log in live; sessions persist across devices"],
+          ["Admin email set", !!(st.admin_email), st.admin_email ? `Admin: ${st.admin_email}` : "Set ADMIN_EMAIL or the Admin email in Settings"],
+          ["Central AI service (owner key)", !!(data.ai?.chatConfigured), data.ai?.chatConfigured ? `Chat AI is live — today: ${data.ai.callsToday}/${data.ai.cap} calls used` : "Add your key in AI Service (sidebar)"],
+          ["Central image service (Gemini key)", !!(data.ai?.imageConfigured), data.ai?.imageConfigured ? "Image generation is live" : "Optional — add the Gemini image key in AI Service"],
+          ["Payment numbers set (JazzCash / EasyPaisa)", !!(st.jazzcash_number || st.easypaisa_number), st.jazzcash_number || st.easypaisa_number ? "shown on the Upgrade page" : "Add in Settings"],
+          ["Gumroad product set", !!st.gumroad_permalink, st.gumroad_permalink ? `permalink: ${st.gumroad_permalink}` : "Optional"],
+          ["Google sign-in", false, "Needs an OAuth provider set up by the owner"],
         ].map(([label, ok, detail]) => <div key={label as string} className="mt-2 flex items-center gap-3 rounded-xl bg-black/25 px-3 py-2.5 text-sm"><span>{ok ? "✅" : "⚠️"}</span><span className="flex-1 text-violet-50">{label as string}</span><span className="text-xs text-violet-300/70">{detail as string}</span></div>)}
       </div>}
     </div>
@@ -189,7 +188,7 @@ function SettingsForm({ initial, onSave }: { initial: Record<string, string>; on
       {F("limit_guest_chat", "Guest chat limit")}{F("limit_free_chat", "Free chat / day")}
       {F("limit_free_prompts", "Free prompt runs / day")}{F("limit_free_images", "Free images / day")}
       {F("limit_free_whatsapp", "Free WhatsApp gens / day")}{F("limit_free_sheet", "Free Sheet AI / day")}
-      {F("limit_free_projects", "Free Create projects")}{F("limit_free_databases", "Free databases")}
+      {F("limit_free_projects", "Free Create projects")}
     </div>
     <button className="btn-primary mt-4" onClick={() => onSave(f)}>Save Settings</button>
   </div>;
@@ -224,7 +223,7 @@ export function AiServiceSection({ ctx }: { ctx: Ctx }) {
     setBusy(false);
     if (r1.json.error || r2.json.error) { ctx.toast(`❌ ${r1.json.error || r2.json.error}`); return; }
     setChatKey(""); setImageKey("");
-    ctx.toast("✅ AI Service saved. The new settings are live for all users — no redeploy needed.");
+    ctx.toast("✅ AI Service saved — live for all users, no redeploy needed.");
     load();
   };
 
@@ -240,8 +239,8 @@ export function AiServiceSection({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">🔑 AI Service <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
-      <p className="mt-1 text-sm leading-relaxed text-violet-200/70">One central key powers the whole app. Users never see or enter any key — they just sign up and use Nova within their plan limits. Keys are stored <b>only on the server</b> and are never sent back to any browser (you see them masked).</p>
+      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🔑 AI Service <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
+      <p className="mt-1 text-sm leading-relaxed text-violet-200/70">One central key powers the whole app. Users never see a key — they just sign up and use Novster. Keys stay <b>only on the server</b> (shown masked here).</p>
 
       <div className="card mt-4 p-4 text-sm">
         <p className="text-violet-50">💬 Chat AI: {info.chatConfigured ? <span className="font-bold text-emerald-300">Configured ✓</span> : <span className="font-bold text-amber-300">Not configured</span>}{info.chatConfigured && <span className="text-violet-300/70"> · Key: {info.chatMasked} · Model: {info.chatModel}</span>}</p>
@@ -277,7 +276,7 @@ export function AiServiceSection({ ctx }: { ctx: Ctx }) {
         <h3 className="font-extrabold text-white">Protection</h3>
         <label className="lbl mt-2">Global daily AI cap (all users combined — protects your key; you as Admin are exempt)</label>
         <input className="inp max-w-xs" type="number" min="0" value={cap} onChange={(e) => setCap(e.target.value)} />
-        <p className="mt-2 text-[11px] leading-relaxed text-violet-300/60">Free provider quotas are small (e.g. a free key may allow only a few dozen calls a day). When the cap is reached, users see an honest &quot;limit reached&quot; message instead of a fake reply. Per-user plan limits (Free 20 chat/day etc.) apply on top of this.</p>
+        <p className="mt-2 text-[11px] leading-relaxed text-violet-300/60">Free provider quotas are small. At the cap, users see an honest &quot;limit reached&quot; message. Plan limits apply on top.</p>
         <button disabled={busy} className="btn-primary mt-4" onClick={save}>{busy ? "Saving…" : "Save AI Service"}</button>
       </div>
     </div>

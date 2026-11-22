@@ -21,13 +21,13 @@ const TOOLS: ToolDef[] = [
 export function ToolsHub({ ctx }: { ctx: Ctx }) {
   const [open, setOpen] = useState<string | null>(null);
   if (!ctx.user) {
-    return <div><h1 className="text-2xl font-extrabold text-white sm:text-3xl">🧰 Tools</h1><p className="mt-1 text-sm text-violet-200/70">10 daily-use tools. Most are Pro — your data saves to your account.</p>
-      <div className="card mx-auto mt-6 max-w-lg p-8 text-center"><p className="text-5xl">🔒</p><h2 className="mt-3 text-xl font-extrabold text-white">Tools are locked for guests</h2><p className="mt-2 text-sm text-violet-200/75">Create a free account to use the free tools (WhatsApp Kit, Sheet AI, Planner, Image Prompt Studio) and see Pro tools.</p><button className="btn-primary mt-5 w-full" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
+    return <div><h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🧰 Tools</h1><p className="mt-1 text-sm text-violet-200/70">10 daily-use tools. Most are Pro.</p>
+      <div className="card mx-auto mt-6 max-w-lg p-8 text-center"><p className="text-5xl">🔒</p><h2 className="mt-3 text-xl font-extrabold text-white">Tools are locked for guests</h2><p className="mt-2 text-sm text-violet-200/75">Create a free account to use the free tools and see Pro tools.</p><button className="btn-primary mt-5 w-full" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
   }
   if (open) {
     const back = () => setOpen(null);
     const proLocked = TOOLS.find((t) => t.id === open)?.tag === "PRO" && !ctx.isPro;
-    if (proLocked) return <div><button className="btn-ghost mb-4 text-sm" onClick={back}>← All Tools</button><LockScreen ctx={ctx} title={TOOLS.find((t) => t.id === open)?.name || "Tool"} desc={TOOLS.find((t) => t.id === open)?.benefit || ""} free="This tool does not run on Free — not even once. Upgrade to open it fully." /></div>;
+    if (proLocked) return <div><button className="btn-ghost mb-4 text-sm" onClick={back}>← All Tools</button><LockScreen ctx={ctx} title={TOOLS.find((t) => t.id === open)?.name || "Tool"} desc={TOOLS.find((t) => t.id === open)?.benefit || ""} free="Doesn&apos;t run on Free — upgrade to open it." /></div>;
     return <div><button className="btn-ghost mb-4 text-sm" onClick={back}>← All Tools</button>
       {open === "invoice" && <InvoiceTool ctx={ctx} />}{open === "social" && <SocialTool ctx={ctx} />}{open === "cv" && <CvTool ctx={ctx} />}
       {open === "whatsapp" && <WhatsAppTool ctx={ctx} />}{open === "youtube" && <YouTubeTool ctx={ctx} />}{open === "docai" && <DocTool ctx={ctx} />}
@@ -36,8 +36,8 @@ export function ToolsHub({ ctx }: { ctx: Ctx }) {
   }
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">🧰 Tools</h1>
-      <p className="mt-1 text-sm text-violet-200/70">{ctx.isPro ? "All 10 tools unlocked." : "Free tools work with daily limits · PRO tools show a lock screen."} Data saves to your account.</p>
+      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🧰 Tools</h1>
+      <p className="mt-1 text-sm text-violet-200/70">{ctx.isPro ? "All 10 tools unlocked." : "Free tools have daily limits · PRO tools are locked."}</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {TOOLS.map((t) => (
           <button key={t.id} onClick={() => setOpen(t.id)} className="card p-5 text-left transition hover:ring-2 hover:ring-violet-500/50">
@@ -53,7 +53,7 @@ export function ToolsHub({ ctx }: { ctx: Ctx }) {
 }
 
 function THead({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-  return <div className="mb-4"><h1 className="text-2xl font-extrabold text-white">{icon} {title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
+  return <div className="mb-4"><h1 className="text-[28px] font-extrabold tracking-tight text-white">{icon} {title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
 }
 const LangPicker = ({ lang, setLang }: { lang: string; setLang: (s: string) => void }) => (
   <div className="flex gap-1.5">{["English", "Urdu", "Roman Urdu"].map((l) => <button key={l} onClick={() => setLang(l)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${lang === l ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
@@ -98,7 +98,7 @@ function InvoiceTool({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <THead icon="🧾" title="Invoice & Khata" sub="Totals are calculated in code — never by AI. Balances update automatically." />
+      <THead icon="🧾" title="Invoice & Khata" sub="Totals calculated in code. Balances auto-update." />
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card p-4">
           <label className="lbl">Your business name (shown on invoice)</label>
@@ -175,7 +175,7 @@ function SocialTool({ ctx }: { ctx: Ctx }) {
     setBusy("");
     if (!res.ok) { setErr(res.error); return; }
     try { const arr = JSON.parse(res.text.replace(/```json|```/g, "").trim()); const mapped: Day[] = arr.slice(0, 30).map((d: { idea: string; caption: string; hashtags: string }, i: number) => ({ day: i + 1, idea: String(d.idea || ""), caption: String(d.caption || ""), hashtags: String(d.hashtags || ""), done: false })); persist(mapped); ctx.toast("30-day calendar generated and saved."); }
-    catch { setErr("The AI reply was not valid calendar JSON. Try Regenerate — nothing was saved."); }
+    catch { setErr("Invalid calendar reply — try Regenerate. Nothing was saved."); }
   };
   const regenDay = async (d: Day) => {
     setBusy(`d${d.day}`);
@@ -186,7 +186,7 @@ function SocialTool({ ctx }: { ctx: Ctx }) {
     persist(days.map((x) => x.day === d.day ? { ...x, idea: pick("IDEA") || x.idea, caption: pick("CAPTION") || x.caption, hashtags: pick("TAGS") || x.hashtags } : x));
   };
 
-  return <div><THead icon="📅" title="Social Content Machine" sub="A saved 30-day calendar — mark days Done, regenerate any day." /><NoKeyNotice ctx={ctx} />
+  return <div><THead icon="📅" title="Social Content Machine" sub="30-day calendar — mark days Done, regenerate any day." /><NoKeyNotice ctx={ctx} />
     <div className="card p-4"><label className="lbl">Your niche / business</label><input className="inp" value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="e.g. homemade food delivery in Lahore" />
       <div className="mt-3 flex flex-wrap items-center gap-2">{["Facebook", "Instagram", "TikTok", "YouTube"].map((p) => <button key={p} onClick={() => togglePlat(p)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${platforms.includes(p) ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{p}</button>)}<LangPicker lang={lang} setLang={setLang} /></div>
       <button disabled={!!busy} className="btn-primary mt-3" onClick={gen}>{busy === "all" ? "Generating 30 days…" : "Generate 30-Day Calendar"}</button>
@@ -212,7 +212,7 @@ function CvTool({ ctx }: { ctx: Ctx }) {
   const lines = (s: string) => s.split("\n").filter(Boolean);
   const wrapCls = ["bg-white text-slate-900", "bg-[#101c3a] text-white", "bg-[#f6f0e6] text-slate-900"][tpl];
 
-  return <div><THead icon="📄" title="CV Maker Pro" sub="The print view contains exactly what you enter — nothing is invented." />
+  return <div><THead icon="📄" title="CV Maker Pro" sub="Print view shows exactly what you enter." />
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card p-4">
         {(["name", "title", "phone", "email", "city"] as const).map((k) => <div key={k} className="mt-2"><label className="lbl capitalize">{k}</label><input className="inp" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>)}
@@ -286,7 +286,7 @@ function YouTubeTool({ ctx }: { ctx: Ctx }) {
     const res = await callAI([{ role: "user", content: `YouTube growth pack. Video topic: ${topic}. Channel niche: ${niche || topic}. Language style: ${lang}. Give EXACTLY these sections:\n## 10 Title Options (numbered)\n## Full Description (with chapters placeholder like 00:00 Intro)\n## 25 Tags (comma-separated, copy-ready block)\n## 3 Thumbnail Text Ideas\n## 10 Video Ideas for this niche` }]);
     setBusy(false); if (res.ok) setOut(res.text); else setErr(res.error);
   };
-  return <div><THead icon="▶️" title="YouTube Growth Kit" sub="Titles, description, 25 tags, thumbnail text & video ideas in one run." /><NoKeyNotice ctx={ctx} />
+  return <div><THead icon="▶️" title="YouTube Growth Kit" sub="Titles, description, 25 tags & ideas in one run." /><NoKeyNotice ctx={ctx} />
     <div className="card p-4"><label className="lbl">Video topic</label><input className="inp" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. How to start a mobile accessories shop" />
       <label className="lbl mt-3">Channel niche</label><input className="inp" value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="e.g. small business tips Pakistan" />
       <div className="mt-3"><LangPicker lang={lang} setLang={setLang} /></div>
@@ -303,7 +303,7 @@ function DocTool({ ctx }: { ctx: Ctx }) {
   const onFile = async (f: File | undefined) => {
     if (!f) return; setFileName(f.name); setErr("");
     if (f.type.startsWith("text") || /\.(txt|md|csv|json)$/i.test(f.name)) { setText((await f.text()).slice(0, 24000)); return; }
-    if (f.type === "application/pdf" || f.type.startsWith("image")) { setErr(`“${f.name}” is a ${f.type === "application/pdf" ? "PDF" : "image"}. This viewer reads text files in-browser. For PDF/image reading, paste the text below — image reading needs a vision-capable model on the AI service, and Nova will not pretend to read a file it cannot.`); return; }
+    if (f.type === "application/pdf" || f.type.startsWith("image")) { setErr(`“${f.name}” is a ${f.type === "application/pdf" ? "PDF" : "image"}. This tool reads text files only — paste the text below.`); return; }
     setErr("Unsupported file type. Use .txt/.md/.csv, or paste the document text below.");
   };
   const run = async () => {
@@ -319,7 +319,7 @@ function DocTool({ ctx }: { ctx: Ctx }) {
     const res = await callAI([{ role: "user", content: prompts[mode] }]);
     setBusy(false); if (res.ok) setOut(res.text); else setErr(res.error);
   };
-  return <div><THead icon="📚" title="Document AI" sub="Summary, key points, Q&A and English ↔ Urdu translation — from Nova's AI service." /><NoKeyNotice ctx={ctx} />
+  return <div><THead icon="📚" title="Document AI" sub="Summary, key points, Q&A & EN ↔ Urdu translation." /><NoKeyNotice ctx={ctx} />
     <div className="card p-4">
       <label className="btn-ghost inline-block cursor-pointer text-sm">📎 Upload .txt / .md / .csv<input type="file" accept=".txt,.md,.csv,.json,.pdf,image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} /></label>
       {fileName && <span className="ml-2 text-sm text-violet-200">{fileName}</span>}
@@ -375,7 +375,7 @@ function PlannerTool({ ctx }: { ctx: Ctx }) {
   const saveE = (n: Expense[]) => { setExpenses(n); saveCollection("planner:expenses", uid, n); };
   const saveT = (n: Task[]) => { setTasks(n); saveCollection("planner:tasks", uid, n); };
 
-  return <div><THead icon="✅" title="Expense & Task Planner" sub="Free forever — the daily habit tool. Saved to your account." />
+  return <div><THead icon="✅" title="Expense & Task Planner" sub="Free forever. Saved to your account." />
     <div className="grid grid-cols-3 gap-3"><div className="card p-4 text-center"><p className="text-xs text-violet-300/70">Today</p><p className="text-xl font-extrabold text-white">{money(todayTotal)}</p></div>
       <div className="card p-4 text-center"><p className="text-xs text-violet-300/70">This month</p><p className="text-xl font-extrabold text-white">{money(monthTotal)}</p></div>
       <div className="card p-4 text-center"><p className="text-xs text-violet-300/70">Open tasks</p><p className="text-xl font-extrabold text-white">{tasks.filter((t) => !t.done).length}</p></div></div>
@@ -406,13 +406,13 @@ function VoiceTool({ ctx }: { ctx: Ctx }) {
   };
   const listen = () => {
     const SR = (window as unknown as { webkitSpeechRecognition?: new () => { lang: string; onresult: (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void; onerror: () => void; start: () => void } }).webkitSpeechRecognition;
-    if (!SR) { setNote("Voice-to-text is not supported in this browser, and your AI provider transcription is not connected here. Use Chrome on Android for built-in voice typing — Nova will not fake a transcript."); return; }
+    if (!SR) { setNote("Voice-to-text isn't supported in this browser. Use Chrome on Android for voice typing."); return; }
     const rec = new SR(); rec.lang = lang;
     rec.onresult = (e) => setTranscript(e.results[0][0].transcript);
     rec.onerror = () => setNote("Voice recognition failed on this device — nothing was transcribed.");
     rec.start(); setNote("Listening… speak now.");
   };
-  return <div><THead icon="🎙️" title="Voice Studio" sub="Read text aloud with the device voice (Urdu + English), plus voice notes to text." />
+  return <div><THead icon="🎙️" title="Voice Studio" sub="Read aloud (Urdu + English) & voice notes to text." />
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card p-4"><h3 className="font-bold text-white">(a) Read aloud</h3>
         <textarea className="inp mt-2 min-h-32" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type or paste text — English or Urdu" dir="auto" />
@@ -420,7 +420,7 @@ function VoiceTool({ ctx }: { ctx: Ctx }) {
           <label className="text-xs text-violet-200">Speed {rate}×</label><input type="range" min={0.5} max={2} step={0.1} value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
         <div className="mt-3 flex gap-2"><button className="btn-primary flex-1" onClick={speak}>▶ Read Aloud</button><button className="btn-ghost" onClick={() => speechSynthesis.cancel()}>Stop</button></div></div>
       <div className="card h-fit p-4"><h3 className="font-bold text-white">(b) Voice note → text</h3>
-        <p className="mt-1 text-sm text-violet-200/70">Uses your device&apos;s speech recognition where available. If your AI provider supports transcription it can be wired in by the owner — otherwise Nova says so honestly.</p>
+        <p className="mt-1 text-sm text-violet-200/70">Uses your device&apos;s speech recognition where available.</p>
         <button className="btn-primary mt-3" onClick={listen}>🎙️ Start Listening</button>
         {note && <p className="mt-2 rounded-xl bg-violet-500/10 px-3 py-2 text-sm text-violet-100">{note}</p>}
         {transcript && <div className="mt-3 rounded-xl bg-black/30 p-3"><p className="text-sm text-violet-50" dir="auto">{transcript}</p><button className="btn-ghost mt-2 text-xs" onClick={() => { navigator.clipboard?.writeText(transcript); ctx.toast("Copied."); }}>Copy transcript</button></div>}</div>
@@ -431,7 +431,7 @@ function VoiceTool({ ctx }: { ctx: Ctx }) {
 function ImgPromptTool({ ctx }: { ctx: Ctx }) {
   const [subject, setSubject] = useState(""); const [style, setStyle] = useState("Photorealistic"); const [lighting, setLighting] = useState("Golden hour"); const [ratio, setRatio] = useState("16:9 landscape");
   const out = subject.trim() ? `${subject}, ${style.toLowerCase()} style, ${lighting.toLowerCase()} lighting, ${ratio} composition, ultra detailed, sharp focus, professional quality, no text, no watermark` : "";
-  return <div><THead icon="✨" title="Image Prompt Studio" sub="Guided builder that writes a professional image prompt — free." />
+  return <div><THead icon="✨" title="Image Prompt Studio" sub="Guided builder for professional image prompts." />
     <div className="card p-4">
       <label className="lbl">Subject</label><input className="inp" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. a small mobile shop in a Pakistani bazaar" />
       <label className="lbl mt-4">Style</label><div className="flex flex-wrap gap-1.5">{["Photorealistic", "Cinematic", "Anime", "3D render", "Watercolor", "Minimal flat illustration", "Product photography"].map((s) => <button key={s} onClick={() => setStyle(s)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${style === s ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{s}</button>)}</div>

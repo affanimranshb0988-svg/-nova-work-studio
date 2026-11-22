@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root { --nova: #6d3df5; }
@@ -9,10 +10,13 @@ body {
     radial-gradient(700px 420px at -10% 25%, rgba(109, 61, 245, 0.20), transparent 55%),
     linear-gradient(180deg, #150826 0%, #0d0716 55%, #090512 100%);
   background-attachment: fixed;
-  font-family: ui-sans-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: "Plus Jakarta Sans", ui-sans-system, system-ui, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 [dir="rtl"], [lang="ur"] { font-family: "Noto Nastaliq Urdu", serif; line-height: 2.1; }
+h1, h2, h3 { letter-spacing: -0.02em; }
+.btn-primary { transition: filter .15s ease, transform .15s ease; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
 .card {
   background: linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02));
   border: 1px solid rgba(167, 139, 250, 0.18);

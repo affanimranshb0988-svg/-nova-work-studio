@@ -4,14 +4,14 @@ import { callAI, ls, setLs, loadCollection, saveCollection, download, toCSV, STA
 import type { Ctx } from "./NovaApp";
 
 function Head({ title, sub }: { title: string; sub: string }) {
-  return <div className="mb-5"><h1 className="text-2xl font-extrabold text-white sm:text-3xl">{title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
+  return <div className="mb-5"><h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">{title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
 }
 export function NoKeyNotice({ ctx }: { ctx: Ctx }) {
   // Central AI: users never need a key. This notice appears only while the
   // owner has not configured the central AI service yet.
   if (ctx.settings.ai_configured) return null;
-  if (ctx.user?.isAdmin) return <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">⚠️ The central AI service is not configured yet — add your AI key in <button className="font-bold underline" onClick={() => ctx.goto("api")}>AI Service</button> so every user can chat. Until then, nobody gets AI replies.</div>;
-  return <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">⚠️ AI service is being set up by the owner — please check back soon. Nova never invents answers.</div>;
+  if (ctx.user?.isAdmin) return <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">⚠️ AI service not set up yet — add your key in <button className="font-bold underline" onClick={() => ctx.goto("api")}>AI Service</button>.</div>;
+  return <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">⚠️ AI service is being set up — check back soon.</div>;
 }
 export function LockScreen({ ctx, title, desc, free }: { ctx: Ctx; title: string; desc: string; free?: string }) {
   return (
@@ -136,7 +136,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
           </div>
         )}
         <div className="flex-1 space-y-3 overflow-y-auto">
-          {msgs.length === 0 && <div className="py-10 text-center text-sm text-violet-200/60">No messages yet — ask anything. Replies come from Nova&apos;s built-in AI service — no key needed.</div>}
+          {msgs.length === 0 && <div className="py-10 text-center text-sm text-violet-200/60">No messages yet — ask anything.</div>}
           {msgs.map((m, i) => (
             <div key={i} className={m.role === "user" ? "text-right" : ""}>
               <div dir={isUrduText(m.content) ? "rtl" : undefined} className={`inline-block max-w-[92%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%] ${isUrduText(m.content) ? "text-right" : "text-left"} ${m.role === "user" ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-50"}`}>{m.content}</div>
@@ -154,7 +154,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
               )}
             </div>
           ))}
-          {busy && <p className="text-sm text-violet-300">Nova is thinking with your AI key…</p>}
+          {busy && <p className="text-sm text-violet-300">Thinking…</p>}
           <div ref={bottomRef} />
         </div>
         {(blocked || freeBlocked) ? (
@@ -209,7 +209,7 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
     if (target === "image") return ctx.goto("image", text);
     const chk = await ctx.bumpUsage("prompts");
     if (!chk.allowed) { ctx.toast(chk.error || "Daily prompt limit reached."); return; }
-    ctx.goto("chat", text); ctx.toast("Prompt sent to Chat Bot — press Send there, or it is in the input via Create flow.");
+    ctx.goto("chat", text); ctx.toast("Prompt sent to Chat Bot.");
     setLs("nova:pendingChat", text);
   };
 
@@ -242,7 +242,7 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setFillFor(null)}>
           <div className="card w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-extrabold text-white">Run: {fillFor.name}</h3>
-            <p className="mt-1 text-xs text-violet-200/70">Fill the variables first — the prompt runs only after this step.</p>
+            <p className="mt-1 text-xs text-violet-200/70">Fill the variables to run it.</p>
             {fillFor.vars.map((v) => <div key={v} className="mt-3"><label className="lbl">{`{{${v}}}`}</label><input className="inp" value={values[v] || ""} onChange={(e) => setValues({ ...values, [v]: e.target.value })} /></div>)}
             {fillFor.vars.length === 0 && <p className="mt-3 text-sm text-violet-200/70">This prompt has no variables.</p>}
             <div className="mt-4 rounded-xl bg-black/30 p-3 text-xs whitespace-pre-wrap text-violet-100">{filled(fillFor)}</div>
@@ -300,7 +300,7 @@ export function CreateSection({ ctx }: { ctx: Ctx }) {
       : { id: Date.now().toString(), name: promptText.slice(0, 42) || "Untitled", kind, prompt: promptText, content, versions: [], updatedAt: new Date().toISOString() };
     setCurrent(proj);
     persist(current ? projects.map((p) => (p.id === proj.id ? proj : p)) : [proj, ...projects]);
-    ctx.toast("Generated with your AI key and saved.");
+    ctx.toast("Generated and saved.");
   };
 
   const zipProject = async (p: Project) => {
@@ -313,7 +313,7 @@ export function CreateSection({ ctx }: { ctx: Ctx }) {
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${p.name.replace(/\W+/g, "-")}.zip`; a.click();
   };
 
-  if (!ctx.user) return <div><Head title="🛠️ Create" sub="Generate websites, documents and sheets — saved per account." /><div className="card p-8 text-center"><p className="text-4xl">🔒</p><p className="mt-2 font-bold text-white">Create is locked for guests</p><p className="mt-1 text-sm text-violet-200/70">Sign up free to create up to {ctx.settings.limit_free_projects || 2} projects.</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
+  if (!ctx.user) return <div><Head title="🛠️ Create" sub="Websites, documents and sheets." /><div className="card p-8 text-center"><p className="text-4xl">🔒</p><p className="mt-2 font-bold text-white">Create is locked for guests</p><p className="mt-1 text-sm text-violet-200/70">Sign up free to create up to {ctx.settings.limit_free_projects || 2} projects.</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
 
   return (
     <div>
@@ -322,7 +322,7 @@ export function CreateSection({ ctx }: { ctx: Ctx }) {
       <div className="card p-4">
         <div className="flex flex-wrap gap-2">{[["website", "🌐 Website / App"], ["document", "📄 Document"], ["sheet", "📊 CSV Sheet"]].map(([k, l]) => <button key={k} onClick={() => setKind(k)} className={`rounded-full px-4 py-2 text-sm font-semibold ${kind === k ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
         <textarea className="inp mt-3 min-h-24" value={promptText} onChange={(e) => setPromptText(e.target.value)} placeholder="Describe what to build — e.g. a booking page for my barber shop in Karachi with prices and WhatsApp button" />
-        <button disabled={busy} className="btn-primary mt-3" onClick={generate}>{busy ? "Generating with your AI key…" : current ? "Regenerate (new version)" : "Generate"}</button>
+        <button disabled={busy} className="btn-primary mt-3" onClick={generate}>{busy ? "Generating…" : current ? "Regenerate (new version)" : "Generate"}</button>
         {current && (
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2"><p className="flex-1 font-bold text-white">{current.name}</p>
@@ -371,12 +371,12 @@ export function ImageSection({ ctx }: { ctx: Ctx }) {
     else setError(String(json.error || "Image generation failed."));
   };
 
-  if (!ctx.user) return <div><Head title="🎨 Image Generate" sub="Real images from Nova's built-in image service." /><div className="card p-8 text-center"><p className="text-4xl">🔒</p><p className="mt-2 font-bold text-white">Locked for guests</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
+  if (!ctx.user) return <div><Head title="🎨 Image Generate" sub="Built-in image service." /><div className="card p-8 text-center"><p className="text-4xl">🔒</p><p className="mt-2 font-bold text-white">Locked for guests</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
 
   return (
     <div>
-      <Head title="🎨 Image Generate" sub={ctx.isPro ? "Unlimited (subject to your provider quota)." : `Free: ${ctx.usage.images ?? 0}/${ctx.settings.limit_free_images || 3} images today.`} />
-      {!ctx.settings.ai_image_configured && <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{ctx.user?.isAdmin ? <>The central image service is not configured yet — add the Gemini image key in <button className="font-bold underline" onClick={() => ctx.goto("api")}>AI Service</button>. Nothing will be faked here.</> : <>The image service is being set up by the owner — please check back soon. Nothing will be faked here.</>}</div>}
+      <Head title="🎨 Image Generate" sub={ctx.isPro ? "Unlimited." : `Free: ${ctx.usage.images ?? 0}/${ctx.settings.limit_free_images || 3} images today.`} />
+      {!ctx.settings.ai_image_configured && <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{ctx.user?.isAdmin ? <>Image service not set up — add the key in <button className="font-bold underline" onClick={() => ctx.goto("api")}>AI Service</button>.</> : <>Image service is being set up — check back soon.</>}</div>}
       <div className="card p-4">
         <textarea className="inp min-h-20" value={promptText} onChange={(e) => setPromptText(e.target.value)} placeholder="Describe the image — e.g. a bright mobile shop banner, Pakistani market, morning light" />
         <button disabled={busy} className="btn-primary mt-3" onClick={generate}>{busy ? "Generating real image…" : "Generate Image"}</button>
@@ -384,67 +384,6 @@ export function ImageSection({ ctx }: { ctx: Ctx }) {
         {img && <div className="mt-4"><img src={img} alt="AI generated" className="w-full rounded-2xl" /><a className="btn-ghost mt-3 inline-block text-sm" href={img} download="nova-image.png">Download image</a></div>}
       </div>
       {history.length > 0 && <><h3 className="mb-2 mt-6 font-bold text-white">Recent (this account)</h3><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{history.map((h, i) => <img key={i} src={h.image} alt={h.prompt} title={h.prompt} className="aspect-square w-full rounded-xl object-cover" />)}</div></>}
-    </div>
-  );
-}
-
-/* ---------------- DATABASE ---------------- */
-type Row = Record<string, string>;
-type Table = { id: string; name: string; columns: string[]; rows: Row[] };
-export function DatabaseSection({ ctx }: { ctx: Ctx }) {
-  const [tables, setTables] = useState<Table[]>([]);
-  const [desc, setDesc] = useState("");
-  const [sel, setSel] = useState<Table | null>(null);
-  const [cloudOk, setCloudOk] = useState<boolean | null>(null);
-  const uid = ctx.user?.id ?? null;
-  useEffect(() => { loadCollection<Table[]>("mytables", uid, []).then(setTables); fetch("/api/health").then((r) => setCloudOk(r.ok)).catch(() => setCloudOk(false)); }, [uid]); // eslint-disable-line
-  const persist = (n: Table[]) => { setTables(n); saveCollection("mytables", uid, n); if (sel) setSel(n.find((t) => t.id === sel.id) || null); };
-
-  const createFromWords = () => {
-    if (!ctx.user) { ctx.toast("Database is locked for guests."); return; }
-    if (!ctx.isPro && tables.length >= Number(ctx.settings.limit_free_databases || 1)) { ctx.toast("Free plan: 1 database. Upgrade to Pro for unlimited."); ctx.goto("pricing"); return; }
-    // plain-words parse: "a table for customers with name, phone, balance"
-    const m = desc.toLowerCase().match(/for\s+(\w+).*?with\s+(.+)/);
-    const name = m ? m[1] : (desc.trim().split(/\s+/)[0] || "mytable");
-    const cols = m ? m[2].split(/[,\s]+/).filter(Boolean) : ["name", "value"];
-    persist([{ id: Date.now().toString(), name, columns: cols, rows: [] }, ...tables]); setDesc("");
-    ctx.toast(`Table “${name}” created with columns: ${cols.join(", ")}`);
-  };
-
-  if (!ctx.user) return <div><Head title="🗄️ Database" sub="App Cloud status + your own data tables." /><div className="card p-8 text-center"><p className="text-4xl">🔒</p><p className="mt-2 font-bold text-white">Locked for guests</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
-
-  return (
-    <div>
-      <Head title="🗄️ Database" sub="Two separate parts: the App Cloud (accounts & plans) and My Data (your tables)." />
-      <div className="card mb-4 p-4 text-sm">
-        <p className="font-bold text-white">(a) App Cloud status</p>
-        <p className="mt-1 text-violet-200/75">Connection: {cloudOk === null ? "checking…" : cloudOk ? <span className="text-emerald-300">Connected — accounts, plans, usage counters and your synced data live here (read-only info for normal users).</span> : <span className="text-red-300">Not reachable right now.</span>}</p>
-        <p className="text-violet-200/60">Signed in as {ctx.user.email} · Plan: {ctx.isPro ? "Pro" : "Free"} · Data below syncs to your account across devices.</p>
-      </div>
-      <div className="card p-4">
-        <p className="font-bold text-white">(b) My Data — create a table in plain words</p>
-        <div className="mt-2 flex gap-2"><input className="inp flex-1" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="a table for customers with name, phone, balance" /><button className="btn-primary" onClick={createFromWords}>Create Table</button></div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="btn-ghost text-xs" onClick={() => download("nova-backup.json", JSON.stringify(tables, null, 2), "application/json")}>Backup (Export JSON)</button>
-          <label className="btn-ghost cursor-pointer text-xs">Restore (Import JSON)<input type="file" accept=".json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const arr = JSON.parse(await f.text()); if (Array.isArray(arr)) { persist(arr); ctx.toast("Restored."); } } catch { ctx.toast("Invalid backup file."); } }} /></label>
-          <button className="btn-ghost text-xs text-red-300" onClick={() => { if (window.confirm("Delete ALL your tables? This cannot be undone.")) persist([]); }}>Delete All</button>
-        </div>
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">{tables.map((t) => <button key={t.id} onClick={() => setSel(t)} className="card p-4 text-left"><p className="font-bold capitalize text-white">{t.name}</p><p className="text-xs text-violet-300/70">{t.columns.join(" · ")}</p><p className="text-xs text-violet-300/70">{t.rows.length} rows</p></button>)}</div>
-      {tables.length === 0 && <p className="mt-3 text-sm text-violet-200/60">No tables yet — create your first one in plain words above.</p>}
-      {sel && (
-        <div className="card mt-4 overflow-x-auto p-4">
-          <div className="flex flex-wrap gap-2"><p className="flex-1 font-bold capitalize text-white">{sel.name}</p>
-            <button className="btn-ghost text-xs" onClick={() => { const row: Row = {}; sel.columns.forEach((c) => (row[c] = "")); persist(tables.map((t) => t.id === sel.id ? { ...t, rows: [...t.rows, row] } : t)); }}>+ Add Row</button>
-            <button className="btn-ghost text-xs" onClick={() => download(`${sel.name}.csv`, toCSV(sel.rows), "text/csv")}>Export CSV</button>
-            <label className="btn-ghost cursor-pointer text-xs">Import CSV<input type="file" accept=".csv" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const lines = (await f.text()).trim().split("\n"); const heads = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "")); const rows = lines.slice(1).map((l) => { const cells = l.split(",").map((c) => c.trim().replace(/^"|"$/g, "")); const r: Row = {}; heads.forEach((h, i) => (r[h] = cells[i] || "")); return r; }); persist(tables.map((t) => t.id === sel.id ? { ...t, columns: heads, rows: [...t.rows, ...rows] } : t)); ctx.toast(`Imported ${rows.length} rows.`); }} /></label>
-            <button className="btn-ghost text-xs text-red-300" onClick={() => persist(tables.filter((t) => t.id !== sel.id))}>Delete Table</button>
-          </div>
-          <table className="mt-3 w-full min-w-[480px] text-sm"><thead><tr>{sel.columns.map((c) => <th key={c} className="border-b border-violet-500/20 px-2 py-2 text-left capitalize text-violet-200">{c}</th>)}<th className="border-b border-violet-500/20" /></tr></thead>
-            <tbody>{sel.rows.map((r, ri) => <tr key={ri}>{sel.columns.map((c) => <td key={c} className="border-b border-white/5 px-1 py-1"><input className="w-full bg-transparent px-1 py-1 text-violet-50 outline-none focus:bg-white/5" value={r[c] || ""} onChange={(e) => { const rows = sel.rows.map((x, xi) => xi === ri ? { ...x, [c]: e.target.value } : x); persist(tables.map((t) => t.id === sel.id ? { ...t, rows } : t)); }} /></td>)}<td><button className="text-red-300" onClick={() => persist(tables.map((t) => t.id === sel.id ? { ...t, rows: t.rows.filter((_, xi) => xi !== ri) } : t))}>✕</button></td></tr>)}</tbody></table>
-          {sel.rows.length === 0 && <p className="py-4 text-center text-sm text-violet-200/60">No rows yet — add your first row.</p>}
-        </div>
-      )}
     </div>
   );
 }
@@ -498,22 +437,22 @@ export function DeploySection({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <Head title="🚀 Deploy" sub="Honest publishing: real install checks + a deploy-ready ZIP. No fake URLs, ever." />
-      {!ctx.isPro && ctx.user && <div className="mb-4 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">Free plan: ZIP export is included. The guided publish flow is a Pro feature — the ZIP itself works the same everywhere.</div>}
+      <Head title="🚀 Deploy" sub="Real install checks + a deploy-ready ZIP." />
+      {!ctx.isPro && ctx.user && <div className="mb-4 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">Free: ZIP export included. Guided publish is Pro.</div>}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card p-5">
           <div className="flex items-center gap-2"><h3 className="flex-1 font-extrabold text-white">📲 App Install checks (live)</h3><button className="btn-ghost px-3 py-1.5 text-xs" disabled={busy} onClick={runChecks}>{busy ? "Checking…" : "Re-run"}</button></div>
           <div className="mt-3 space-y-2">{checks.map((c, i) => <div key={i} className="flex items-center gap-3 rounded-xl bg-black/25 px-3 py-2 text-sm"><span>{c.ok === null ? "⏳" : c.ok ? "✅" : "❌"}</span><span className="flex-1 text-violet-50">{c.label}</span><span className="text-xs text-violet-300/70">{c.detail}</span></div>)}</div>
           <button className="btn-primary mt-4 w-full" onClick={install}>Install App</button>
-          <p className="mt-2 text-[11px] text-violet-300/60">After the first visit, Nova opens from cache with the network off and shows the app shell / offline page — never a browser error.</p>
+          <p className="mt-2 text-[11px] text-violet-300/60">Works offline after the first visit.</p>
         </div>
         <div className="card p-5">
           <h3 className="font-extrabold text-white">📦 Project publish</h3>
-          {project ? <><p className="mt-2 text-sm text-violet-200/80">Carried over from Create: <b className="text-white">{project.name}</b> ({project.kind})</p>
+          {project ? <><p className="mt-2 text-sm text-violet-200/80">From Create: <b className="text-white">{project.name}</b> ({project.kind})</p>
             <button className="btn-primary mt-3 w-full" onClick={exportZip}>Download Deploy-Ready ZIP (+ README)</button>
-            <p className="mt-3 text-sm leading-relaxed text-violet-200/70">The ZIP is the deliverable. Publish it on Netlify Drop, Vercel or GitHub Pages (steps inside the README) — your host returns the real public URL. <b className="text-white">Deploy state inside Nova is local to this device</b>; Nova never invents a live URL.</p></>
-            : <p className="mt-2 text-sm text-violet-200/70">No project carried over yet. Go to <button className="underline" onClick={() => ctx.goto("create")}>Create</button>, generate a project, then tap “Go to Deploy”.</p>}
-          <div className="mt-4 rounded-xl bg-black/25 p-3 text-xs leading-relaxed text-violet-200/70">Guests: view only. Free: ZIP export. Pro: ZIP + guided publish flow (same ZIP, plus step-by-step host walkthrough above).</div>
+            <p className="mt-3 text-sm leading-relaxed text-violet-200/70">Publish the ZIP on Netlify Drop, Vercel or GitHub Pages (steps in the README) — your host gives you the real URL. Deploy state is local to this device.</p></>
+            : <p className="mt-2 text-sm text-violet-200/70">No project yet — generate one in <button className="underline" onClick={() => ctx.goto("create")}>Create</button>, then tap “Go to Deploy”.</p>}
+          <div className="mt-4 rounded-xl bg-black/25 p-3 text-xs leading-relaxed text-violet-200/70">Guests: view only · Free: ZIP export · Pro: ZIP + guided publish.</div>
         </div>
       </div>
     </div>

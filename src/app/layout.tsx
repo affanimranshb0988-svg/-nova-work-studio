@@ -6,13 +6,13 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://novaworkstudio-zeta.vercel.app"),
   alternates: { canonical: "https://novaworkstudio-zeta.vercel.app/" },
   title: "Novster Work Studio",
-  description: "All-in-one AI work studio: Chat Bot, Prompts, 10 daily Tools (Invoice & Khata, Content Calendar, CV Maker, WhatsApp Kit), Create, Image Generate, Database & Deploy. Free and Pro plans.",
+  description: "All-in-one AI work studio: Chat Bot, Prompts, 10 daily Tools (Invoice & Khata, Content Calendar, CV Maker, WhatsApp Kit), Create, Image Generate & Deploy. Free and Pro plans.",
   manifest: "/manifest.json",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Novster", statusBarStyle: "black-translucent" },
   openGraph: {
     title: "Novster Work Studio",
-    description: "Chat Bot, Prompts, 10 daily Tools, Create, Image Generate, Database & Deploy. Free and Pro plans.",
+    description: "Chat Bot, Prompts, 10 daily Tools, Create, Image Generate & Deploy. Free and Pro plans.",
     url: "https://novaworkstudio-zeta.vercel.app",
     siteName: "Novster Work Studio",
     type: "website",
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
