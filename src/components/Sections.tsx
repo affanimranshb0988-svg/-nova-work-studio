@@ -67,12 +67,28 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   const commitGenRef = useRef(0);
   const busyRef = useRef(false);
   const sortChats = (list: Chat[]) => [...list].sort((a, b) => b.updatedAt - a.updatedAt);
-  const commitChats = (next: Chat[]) => {
+  // Saves are confirmed by the server: a failed cloud save used to fail
+  // silently while the next mount reloaded the old server copy, so a
+  // deleted chat came back with no explanation. Now the caller gets a
+  // boolean; delete/clear/message-delete restore the snapshot on failure
+  // and the user is told instead of left guessing.
+  const commitChats = async (next: Chat[], opts?: { restore?: Chat[] }): Promise<boolean> => {
     const sorted = sortChats(next);
     commitGenRef.current += 1;
     chatsRef.current = sorted;
     setChats(sorted);
-    saveCollection("chats-v2", uidRef.current, sorted);
+    const ok = await saveCollection("chats-v2", uidRef.current, sorted);
+    if (!ok) {
+      if (opts?.restore) {
+        const r = sortChats(opts.restore);
+        commitGenRef.current += 1;
+        chatsRef.current = r;
+        setChats(r);
+        setLs(uidRef.current ? `nova:${uidRef.current}:chats-v2` : "nova:guest:chats-v2", r);
+      }
+      ctx.toast("⚠️ Couldn't save — check your connection and try again.");
+    }
+    return ok;
   };
 
   useEffect(() => {
@@ -83,12 +99,16 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
       if (cancelled || commitGenRef.current !== genAtMount) return; // user already chatted here — never clobber
       let list = Array.isArray(saved) ? [...saved] : [];
       // Adopt chats made as a guest before login — they used to vanish.
+      // The guest key is dropped only after the merged list is confirmed
+      // saved; dropping it first would lose those chats if the save failed.
+      let mergedGuest = false;
       if (uid) {
         const guestChats = ls<Chat[]>("nova:guest:chats-v2", []);
         if (guestChats.length) {
           const ids = new Set(list.map((c) => c.id));
-          list = [...list, ...guestChats.filter((c) => c && c.id && !ids.has(c.id))];
-          try { localStorage.removeItem("nova:guest:chats-v2"); } catch {}
+          const add = guestChats.filter((c) => c && c.id && !ids.has(c.id));
+          if (add.length) { list = [...list, ...add]; mergedGuest = true; }
+          else { try { localStorage.removeItem("nova:guest:chats-v2"); } catch {} }
         }
       }
       if (!list.length) {
@@ -105,23 +125,42 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
       setChats(sorted);
       setActiveId(sorted[0].id);
       setShowChats(true); // history visible by default once chats exist
-      if (sorted.length !== (saved?.length ?? 0)) saveCollection("chats-v2", uid, sorted);
+      if (sorted.length !== (saved?.length ?? 0)) {
+        const ok = await saveCollection("chats-v2", uid, sorted);
+        if (ok && mergedGuest) { try { localStorage.removeItem("nova:guest:chats-v2"); } catch {} }
+      }
     });
     return () => { cancelled = true; };
   }, [uid]); // eslint-disable-line
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+  // "Run in Chat Bot" from Prompts lands here: fill the input with the
+  // prompt text. Do NOT auto-send — the user presses Send. (Create and
+  // Image already consume carryPrompt this way; Chat never did, so the
+  // prompt silently vanished despite the success toast.)
+  useEffect(() => {
+    if (ctx.carryPrompt) { setInput(ctx.carryPrompt); ctx.setCarryPrompt(""); }
+  }, [ctx.carryPrompt]); // eslint-disable-line
 
   const blocked = !ctx.isPro && ctx.plan === "guest" && ctx.guestChat >= Number(ctx.settings.limit_guest_chat || 5);
   const freeBlocked = !ctx.isPro && !!ctx.user && (ctx.usage.chat ?? 0) >= Number(ctx.settings.limit_free_chat || 20);
 
   const persistChats = (next: Chat[]) => commitChats(next);
-  const writeMsgs = (targetId: string, next: Msg[]) => {
+  const writeMsgs = (targetId: string, next: Msg[], opts?: { restore?: Chat[] }) => {
     const cur = chatsRef.current;
     const base = cur.some((c) => c.id === targetId) ? cur : [{ id: targetId, title: "New chat", msgs: [] as Msg[], updatedAt: Date.now() }, ...cur];
-    commitChats(base.map((c) => c.id === targetId ? { ...c, msgs: next, title: next.length === 0 ? "New chat" : c.title === "New chat" ? autoTitle(next) : c.title, updatedAt: Date.now() } : c));
+    return commitChats(base.map((c) => c.id === targetId ? { ...c, msgs: next, title: next.length === 0 ? "New chat" : c.title === "New chat" ? autoTitle(next) : c.title, updatedAt: Date.now() } : c), opts);
   };
   const startNewChat = () => { const c: Chat = { id: newChatId(), title: "New chat", msgs: [], updatedAt: Date.now() }; commitChats([c, ...chatsRef.current]); setActiveId(c.id); setShowChats(false); };
-  const deleteChat = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this chat? This cannot be undone.")) return; const n = sortChats(chatsRef.current.filter((c) => c.id !== id)); commitChats(n); if (activeId === id) setActiveId(n[0]?.id ?? null); };
+  const deleteChat = async (id: string) => {
+    if (typeof window !== "undefined" && !window.confirm("Delete this chat? This cannot be undone.")) return;
+    const snapshot = chatsRef.current;
+    const n = sortChats(snapshot.filter((c) => c.id !== id));
+    if (activeId === id) setActiveId(n[0]?.id ?? null);
+    // Confirm only once the server accepted the delete; on failure the
+    // chat is restored and the user is told (it used to silently return).
+    const ok = await commitChats(n, { restore: snapshot });
+    if (ok) ctx.toast("Chat deleted.");
+  };
   const renameChat = (id: string) => { const c = chatsRef.current.find((x) => x.id === id); if (!c) return; const name = typeof window !== "undefined" ? window.prompt("Chat name:", c.title) : null; if (!name || !name.trim()) return; commitChats(chatsRef.current.map((x) => x.id === id ? { ...x, title: name.trim().slice(0, 60) } : x)); };
   const visibleChats = chats.filter((c) => !query.trim() || c.title.toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -140,8 +179,19 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
     writeMsgs(targetId, done);
   };
 
-  const delMsg = (idx: number) => { if (!active) return; writeMsgs(active.id, msgs.filter((_, x) => x !== idx)); };
-  const clearChat = () => { if (!active) return; if (typeof window !== "undefined" && !window.confirm("Delete all messages in this chat? This cannot be undone.")) return; writeMsgs(active.id, []); ctx.toast("Chat cleared."); };
+  const delMsg = async (idx: number) => {
+    if (!active) return;
+    const snapshot = chatsRef.current;
+    const ok = await writeMsgs(active.id, msgs.filter((_, x) => x !== idx), { restore: snapshot });
+    if (ok) ctx.toast("Message deleted.");
+  };
+  const clearChat = async () => {
+    if (!active) return;
+    if (typeof window !== "undefined" && !window.confirm("Delete all messages in this chat? This cannot be undone.")) return;
+    const snapshot = chatsRef.current;
+    const ok = await writeMsgs(active.id, [], { restore: snapshot });
+    if (ok) ctx.toast("Chat cleared.");
+  };
 
   const act = (m: Msg, a: string, idx?: number) => {
     if (a === "del" && typeof idx === "number") { delMsg(idx); return; }
@@ -271,7 +321,6 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
     const chk = await ctx.bumpUsage("prompts");
     if (!chk.allowed) { ctx.toast(chk.error || "Daily prompt limit reached."); return; }
     ctx.goto("chat", text); ctx.toast("Prompt sent to Chat Bot.");
-    setLs("nova:pendingChat", text);
   };
 
   return (
@@ -300,13 +349,12 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
       </div>
 
       {fillFor && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setFillFor(null)}>
-          <div className="card w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80 p-4" onClick={() => setFillFor(null)}>
+          <div className="modal-card max-h-[85vh] w-full max-w-lg overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-extrabold text-white">Run: {fillFor.name}</h3>
             <p className="mt-1 text-xs text-violet-200/70">Fill the variables to run it.</p>
             {fillFor.vars.map((v) => <div key={v} className="mt-3"><label className="lbl">{`{{${v}}}`}</label><input className="inp" value={values[v] || ""} onChange={(e) => setValues({ ...values, [v]: e.target.value })} /></div>)}
             {fillFor.vars.length === 0 && <p className="mt-3 text-sm text-violet-200/70">This prompt has no variables.</p>}
-            <div className="mt-4 rounded-xl bg-black/30 p-3 text-xs whitespace-pre-wrap text-violet-100">{filled(fillFor)}</div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button className="btn-primary py-2 text-sm" onClick={() => runTarget(fillFor, "chat")}>Run in Chat Bot</button>
               <button className="btn-ghost py-2 text-sm" onClick={() => runTarget(fillFor, "create")}>Run in Create</button>
@@ -317,8 +365,8 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
       )}
 
       {editor && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setEditor(null)}>
-          <div className="card w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80 p-4" onClick={() => setEditor(null)}>
+          <div className="modal-card max-h-[85vh] w-full max-w-lg overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-extrabold text-white">{editor.name ? "Edit Prompt" : "New Prompt"}</h3>
             <label className="lbl mt-3">Name</label><input className="inp" value={editor.name} onChange={(e) => setEditor({ ...editor, name: e.target.value })} />
             <label className="lbl mt-3">Category</label><input className="inp" value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} />

@@ -40,14 +40,32 @@ export async function loadCollection<T>(name: string, userId: number | null, fal
 // Server saves are chained per collection so rapid writes (user message,
 // then AI reply) can never land out of order and roll the cloud copy
 // backwards to an older snapshot.
-const saveQueues = new Map<string, Promise<void>>();
-export async function saveCollection(name: string, userId: number | null, data: unknown) {
+// Returns true only when the server accepted the save (HTTP ok + {ok:true}).
+// A failed save used to be swallowed silently (catch {}) while the next
+// mount reloaded the old server copy — so a deleted chat came back with no
+// explanation. Now: one retry, a 20s timeout so a hung request cannot stall
+// the queue forever, and a boolean result so the UI can confirm or restore.
+const saveQueues = new Map<string, Promise<boolean>>();
+export async function saveCollection(name: string, userId: number | null, data: unknown): Promise<boolean> {
   setLs(userId ? `nova:${userId}:${name}` : `nova:guest:${name}`, data);
-  if (!userId) return;
+  if (!userId) return true;
   const key = `${userId}:${name}`;
-  const prev = saveQueues.get(key) ?? Promise.resolve();
-  const next = prev.then(async () => { try { await api(`/api/data/${encodeURIComponent(name)}`, { method: "PUT", body: JSON.stringify({ data }) }); } catch {} });
+  const prev = saveQueues.get(key) ?? Promise.resolve(true);
+  const next = prev.then(async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      try {
+        const { res, json } = await api(`/api/data/${encodeURIComponent(name)}`, { method: "PUT", body: JSON.stringify({ data }), signal: ctrl.signal });
+        if (res.ok && json && json.ok) return true;
+      } catch {}
+      finally { clearTimeout(timer); }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+    }
+    return false;
+  });
   saveQueues.set(key, next);
+  return next;
 }
 
 export type AIResult = { ok: true; text: string } | { ok: false; error: string };
