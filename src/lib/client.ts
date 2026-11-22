@@ -37,6 +37,19 @@ export async function loadCollection<T>(name: string, userId: number | null, fal
   }
   return ls<T>(userId ? `nova:${userId}:${name}` : `nova:guest:${name}`, fallback);
 }
+// Like loadCollection, but also returns the server row's updatedAt so
+// delete-path saves can send it back as a revision guard (optimistic
+// concurrency): a stale instance's PUT must never silently overwrite a
+// newer server list that no longer contains a deleted chat.
+export async function loadCollectionMeta<T>(name: string, userId: number | null, fallback: T): Promise<{ data: T; updatedAt: string | null }> {
+  if (userId) {
+    try {
+      const { json } = await api(`/api/data/${encodeURIComponent(name)}`);
+      if (json.data !== null && json.data !== undefined) { setLs(`nova:${userId}:${name}`, json.data); return { data: json.data as T, updatedAt: (json.updatedAt as string | null) ?? null }; }
+    } catch {}
+  }
+  return { data: ls<T>(userId ? `nova:${userId}:${name}` : `nova:guest:${name}`, fallback), updatedAt: null };
+}
 // Server saves are chained per collection so rapid writes (user message,
 // then AI reply) can never land out of order and roll the cloud copy
 // backwards to an older snapshot.
@@ -45,7 +58,7 @@ export async function loadCollection<T>(name: string, userId: number | null, fal
 // mount reloaded the old server copy — so a deleted chat came back with no
 // explanation. Now: one retry, a 20s timeout so a hung request cannot stall
 // the queue forever, and a boolean result so the UI can confirm or restore.
-const saveQueues = new Map<string, Promise<boolean>>();
+const saveQueues = new Map<string, Promise<unknown>>();
 export async function saveCollection(name: string, userId: number | null, data: unknown): Promise<boolean> {
   setLs(userId ? `nova:${userId}:${name}` : `nova:guest:${name}`, data);
   if (!userId) return true;
@@ -63,6 +76,37 @@ export async function saveCollection(name: string, userId: number | null, data: 
       if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
     }
     return false;
+  });
+  saveQueues.set(key, next);
+  return next;
+}
+
+export type CheckedSave = { ok: boolean; conflict?: boolean; updatedAt?: string | null };
+// Delete-path save: same queue, 20s timeout and 1 retry as saveCollection,
+// but sends the revision the client last loaded (baseUpdatedAt). The server
+// rejects with HTTP 409 when it holds a newer revision — a stale second
+// instance (another tab, PWA vs browser) must never overwrite a delete.
+// A 409 is definitive, not transient, so it is returned immediately
+// without burning the retry. The caller reloads, re-applies the delete,
+// and retries once.
+export async function saveCollectionChecked(name: string, userId: number | null, data: unknown, baseUpdatedAt: string | null): Promise<CheckedSave> {
+  setLs(userId ? `nova:${userId}:${name}` : `nova:guest:${name}`, data);
+  if (!userId) return { ok: true };
+  const key = `${userId}:${name}`;
+  const prev = saveQueues.get(key) ?? Promise.resolve();
+  const next = prev.then(async (): Promise<CheckedSave> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      try {
+        const { res, json } = await api(`/api/data/${encodeURIComponent(name)}`, { method: "PUT", body: JSON.stringify({ data, baseUpdatedAt }), signal: ctrl.signal });
+        if (res.status === 409) return { ok: false, conflict: true, updatedAt: (json?.updatedAt as string | null) ?? null };
+        if (res.ok && json && json.ok) return { ok: true, updatedAt: (json?.updatedAt as string | null) ?? null };
+      } catch {}
+      finally { clearTimeout(timer); }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+    }
+    return { ok: false };
   });
   saveQueues.set(key, next);
   return next;

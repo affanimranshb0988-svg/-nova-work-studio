@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { callAI, ls, setLs, loadCollection, saveCollection, download, toCSV, STARTER_PROMPTS } from "@/lib/client";
+import { callAI, ls, setLs, loadCollection, loadCollectionMeta, saveCollection, saveCollectionChecked, download, toCSV, STARTER_PROMPTS } from "@/lib/client";
 import { Markdown } from "./Markdown";
 import type { Ctx } from "./NovaApp";
 
@@ -66,18 +66,76 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   // overwrite chats the user already created in this session.
   const commitGenRef = useRef(0);
   const busyRef = useRef(false);
+  // Server revision (updatedAt) last seen for chats-v2 — from the mount GET,
+  // refreshed after every successful delete-path save. Delete-path PUTs send
+  // it back; the server 409s when another instance saved a newer list.
+  const serverRevRef = useRef<string | null>(null);
+  // Guest adoption runs ONCE per login session. ChatSection remounts on every
+  // section switch, and the old code re-merged the guest key on every
+  // remount — any chat id sitting in the guest key kept coming back.
+  const mergedForUidRef = useRef<number | null>(null);
+  // A deleted chat must never come back through the guest key: drop the chat
+  // id from nova:guest:chats-v2 whenever a delete-path action runs. (A
+  // null-uid save snapshots the whole list into the guest key, so a deleted
+  // id can sit there waiting for the next merge.)
+  const purgeGuestChat = (id: string) => {
+    try {
+      const g = ls<Chat[]>("nova:guest:chats-v2", []);
+      if (!g.length) return;
+      const kept = g.filter((c) => c && c.id !== id);
+      if (kept.length) setLs("nova:guest:chats-v2", kept);
+      else localStorage.removeItem("nova:guest:chats-v2");
+    } catch {}
+  };
+  // Re-applies a delete to a freshly loaded list after a 409. Returns the
+  // new list plus whether the target was already gone (delete already done).
+  type Reapply = (fresh: Chat[]) => { list: Chat[]; alreadyGone: boolean };
+  // Delete-path save with the revision guard. On 409: reload, re-apply the
+  // delete to the fresh list, retry the PUT once with the fresh revision.
+  // If the fresh list already lacks the target, the delete is already done.
+  const saveDeleteGuarded = async (next: Chat[], reapply: Reapply): Promise<{ ok: boolean; synced?: Chat[] }> => {
+    const uidNow = uidRef.current;
+    if (!uidNow) return { ok: await saveCollection("chats-v2", null, next) };
+    const first = await saveCollectionChecked("chats-v2", uidNow, next, serverRevRef.current);
+    if (first.ok) { if (first.updatedAt) serverRevRef.current = first.updatedAt; return { ok: true }; }
+    if (!first.conflict) return { ok: false };
+    const fresh = await loadCollectionMeta<Chat[]>("chats-v2", uidNow, []);
+    const freshList = Array.isArray(fresh.data) ? [...fresh.data] : [];
+    const { list, alreadyGone } = reapply(freshList);
+    const synced = sortChats(list);
+    if (alreadyGone) {
+      serverRevRef.current = fresh.updatedAt;
+      setLs(`nova:${uidNow}:chats-v2`, synced);
+      return { ok: true, synced };
+    }
+    const retry = await saveCollectionChecked("chats-v2", uidNow, synced, fresh.updatedAt);
+    if (retry.ok) { if (retry.updatedAt) serverRevRef.current = retry.updatedAt; return { ok: true, synced }; }
+    return { ok: false };
+  };
   const sortChats = (list: Chat[]) => [...list].sort((a, b) => b.updatedAt - a.updatedAt);
   // Saves are confirmed by the server: a failed cloud save used to fail
   // silently while the next mount reloaded the old server copy, so a
   // deleted chat came back with no explanation. Now the caller gets a
   // boolean; delete/clear/message-delete restore the snapshot on failure
   // and the user is told instead of left guessing.
-  const commitChats = async (next: Chat[], opts?: { restore?: Chat[] }): Promise<boolean> => {
+  const commitChats = async (next: Chat[], opts?: { restore?: Chat[]; guarded?: Reapply }): Promise<boolean> => {
     const sorted = sortChats(next);
     commitGenRef.current += 1;
     chatsRef.current = sorted;
     setChats(sorted);
-    const ok = await saveCollection("chats-v2", uidRef.current, sorted);
+    let ok: boolean;
+    let synced: Chat[] | undefined;
+    if (opts?.guarded && uidRef.current) {
+      const r = await saveDeleteGuarded(sorted, opts.guarded);
+      ok = r.ok; synced = r.synced;
+    } else {
+      ok = await saveCollection("chats-v2", uidRef.current, sorted);
+    }
+    if (ok && synced) {
+      commitGenRef.current += 1;
+      chatsRef.current = synced;
+      setChats(synced);
+    }
     if (!ok) {
       if (opts?.restore) {
         const r = sortChats(opts.restore);
@@ -94,15 +152,20 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     let cancelled = false;
     const genAtMount = commitGenRef.current;
+    if (!uid) mergedForUidRef.current = null; // logged out: a later login may adopt new guest chats
     loadCollection<string[]>("memory", uid, []).then((m) => { if (!cancelled) setMemory(m); });
-    loadCollection<Chat[]>("chats-v2", uid, []).then(async (saved) => {
+    loadCollectionMeta<Chat[]>("chats-v2", uid, []).then(async ({ data: saved, updatedAt }) => {
       if (cancelled || commitGenRef.current !== genAtMount) return; // user already chatted here — never clobber
+      if (uid) serverRevRef.current = updatedAt;
       let list = Array.isArray(saved) ? [...saved] : [];
       // Adopt chats made as a guest before login — they used to vanish.
       // The guest key is dropped only after the merged list is confirmed
       // saved; dropping it first would lose those chats if the save failed.
+      // ONCE per login session: this effect runs on every remount (section
+      // switches remount ChatSection), and re-merging on every remount is
+      // how a deleted chat kept coming back from the guest key.
       let mergedGuest = false;
-      if (uid) {
+      if (uid && mergedForUidRef.current !== uid) {
         const guestChats = ls<Chat[]>("nova:guest:chats-v2", []);
         if (guestChats.length) {
           const ids = new Set(list.map((c) => c.id));
@@ -110,6 +173,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
           if (add.length) { list = [...list, ...add]; mergedGuest = true; }
           else { try { localStorage.removeItem("nova:guest:chats-v2"); } catch {} }
         }
+        if (!mergedGuest) mergedForUidRef.current = uid;
       }
       if (!list.length) {
         // Migrate the old single conversation (pre-v6) into the first chat — nothing is lost.
@@ -127,7 +191,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
       setShowChats(true); // history visible by default once chats exist
       if (sorted.length !== (saved?.length ?? 0)) {
         const ok = await saveCollection("chats-v2", uid, sorted);
-        if (ok && mergedGuest) { try { localStorage.removeItem("nova:guest:chats-v2"); } catch {} }
+        if (ok && mergedGuest) { try { localStorage.removeItem("nova:guest:chats-v2"); } catch {} mergedForUidRef.current = uid; }
       }
     });
     return () => { cancelled = true; };
@@ -145,7 +209,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   const freeBlocked = !ctx.isPro && !!ctx.user && (ctx.usage.chat ?? 0) >= Number(ctx.settings.limit_free_chat || 20);
 
   const persistChats = (next: Chat[]) => commitChats(next);
-  const writeMsgs = (targetId: string, next: Msg[], opts?: { restore?: Chat[] }) => {
+  const writeMsgs = (targetId: string, next: Msg[], opts?: { restore?: Chat[]; guarded?: Reapply }) => {
     const cur = chatsRef.current;
     const base = cur.some((c) => c.id === targetId) ? cur : [{ id: targetId, title: "New chat", msgs: [] as Msg[], updatedAt: Date.now() }, ...cur];
     return commitChats(base.map((c) => c.id === targetId ? { ...c, msgs: next, title: next.length === 0 ? "New chat" : c.title === "New chat" ? autoTitle(next) : c.title, updatedAt: Date.now() } : c), opts);
@@ -153,12 +217,18 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
   const startNewChat = () => { const c: Chat = { id: newChatId(), title: "New chat", msgs: [], updatedAt: Date.now() }; commitChats([c, ...chatsRef.current]); setActiveId(c.id); setShowChats(false); };
   const deleteChat = async (id: string) => {
     if (typeof window !== "undefined" && !window.confirm("Delete this chat? This cannot be undone.")) return;
+    purgeGuestChat(id);
     const snapshot = chatsRef.current;
     const n = sortChats(snapshot.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(n[0]?.id ?? null);
     // Confirm only once the server accepted the delete; on failure the
     // chat is restored and the user is told (it used to silently return).
-    const ok = await commitChats(n, { restore: snapshot });
+    // The guarded save also stops a stale second instance overwriting the
+    // delete, and the guest purge above stops the merge bringing it back.
+    const ok = await commitChats(n, { restore: snapshot, guarded: (fresh) => {
+      const list = fresh.filter((c) => c.id !== id);
+      return { list, alreadyGone: list.length === fresh.length };
+    } });
     if (ok) ctx.toast("Chat deleted.");
   };
   const renameChat = (id: string) => { const c = chatsRef.current.find((x) => x.id === id); if (!c) return; const name = typeof window !== "undefined" ? window.prompt("Chat name:", c.title) : null; if (!name || !name.trim()) return; commitChats(chatsRef.current.map((x) => x.id === id ? { ...x, title: name.trim().slice(0, 60) } : x)); };
@@ -181,15 +251,27 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
 
   const delMsg = async (idx: number) => {
     if (!active) return;
+    const chatId = active.id;
+    purgeGuestChat(chatId);
     const snapshot = chatsRef.current;
-    const ok = await writeMsgs(active.id, msgs.filter((_, x) => x !== idx), { restore: snapshot });
+    const ok = await writeMsgs(active.id, msgs.filter((_, x) => x !== idx), { restore: snapshot, guarded: (fresh) => {
+      const target = fresh.find((c) => c.id === chatId);
+      if (!target || idx >= target.msgs.length) return { list: fresh, alreadyGone: true };
+      return { list: fresh.map((c) => c.id === chatId ? { ...c, msgs: c.msgs.filter((_, x) => x !== idx), updatedAt: Date.now() } : c), alreadyGone: false };
+    } });
     if (ok) ctx.toast("Message deleted.");
   };
   const clearChat = async () => {
     if (!active) return;
     if (typeof window !== "undefined" && !window.confirm("Delete all messages in this chat? This cannot be undone.")) return;
+    const chatId = active.id;
+    purgeGuestChat(chatId);
     const snapshot = chatsRef.current;
-    const ok = await writeMsgs(active.id, [], { restore: snapshot });
+    const ok = await writeMsgs(active.id, [], { restore: snapshot, guarded: (fresh) => {
+      const target = fresh.find((c) => c.id === chatId);
+      if (!target || target.msgs.length === 0) return { list: fresh, alreadyGone: true };
+      return { list: fresh.map((c) => c.id === chatId ? { ...c, msgs: [], title: "New chat", updatedAt: Date.now() } : c), alreadyGone: false };
+    } });
     if (ok) ctx.toast("Chat cleared.");
   };
 
