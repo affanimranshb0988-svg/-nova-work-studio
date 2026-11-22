@@ -75,12 +75,21 @@ export async function POST(req: NextRequest) {
 
     // action === "image"
     const prompt = String(body.prompt || "");
+    const attached = body.image && typeof body.image === "object"
+      ? { data: String(body.image.data || ""), mime: String(body.image.mime || "") }
+      : null;
+    if (attached && (!attached.data || !attached.mime.startsWith("image/") || attached.data.length > 3000000)) {
+      return NextResponse.json({ error: "That attached image could not be used — please choose a JPG or PNG photo and try again." }, { status: 400 });
+    }
     if (c.baseUrl.includes("generativelanguage.googleapis.com")) {
-      // Gemini native image generation
+      // Gemini native image generation (or edit, when an image is attached)
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${c.model}:generateContent?key=${encodeURIComponent(c.key)}`;
+      const reqParts = attached
+        ? [{ inlineData: { mimeType: attached.mime, data: attached.data } }, { text: prompt }]
+        : [{ text: prompt }];
       const res = await fetch(url, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }),
+        body: JSON.stringify({ contents: [{ parts: reqParts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }),
         signal: AbortSignal.timeout(120000),
       });
       const text = await res.text();
@@ -92,6 +101,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ image: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}` });
     }
     // OpenAI-compatible images endpoint
+    if (attached) {
+      // Image edit: POST multipart to /images/edits. Not every provider or
+      // model supports it — if it is rejected, say so honestly instead of
+      // silently falling back to a text-only generation.
+      const form = new FormData();
+      form.append("image", new Blob([Buffer.from(attached.data, "base64")], { type: attached.mime }), "image.jpg");
+      form.append("prompt", prompt);
+      form.append("model", c.model);
+      form.append("n", "1");
+      form.append("size", "1024x1024");
+      const editRes = await fetch(`${c.baseUrl}/images/edits`, {
+        method: "POST", headers: { Authorization: `Bearer ${c.key}` },
+        body: form, signal: AbortSignal.timeout(120000),
+      });
+      const editText = await editRes.text();
+      if (!editRes.ok) {
+        return NextResponse.json({ error: editRes.status === 429 ? BUSY : "Image editing is not supported by the current image provider — try text-only generation instead." }, { status: 502 });
+      }
+      let editJson: { data?: { b64_json?: string; url?: string }[] } = {};
+      try { editJson = JSON.parse(editText); } catch { return NextResponse.json({ error: "Provider returned no image data." }, { status: 502 }); }
+      const editItem = editJson?.data?.[0];
+      if (editItem?.b64_json) return NextResponse.json({ image: `data:image/png;base64,${editItem.b64_json}` });
+      if (editItem?.url) return NextResponse.json({ image: editItem.url });
+      return NextResponse.json({ error: "Provider returned no image data." }, { status: 502 });
+    }
     const res = await fetch(`${c.baseUrl}/images/generations`, {
       method: "POST", headers,
       body: JSON.stringify({ model: c.model, prompt, n: 1, size: "1024x1024" }),

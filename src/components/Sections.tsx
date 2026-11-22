@@ -464,8 +464,45 @@ export function ImageSection({ ctx }: { ctx: Ctx }) {
   const [img, setImg] = useState("");
   const [error, setError] = useState("");
   const [history, setHistory] = useState<{ prompt: string; image: string }[]>([]);
+  const [attached, setAttached] = useState<{ data: string; mime: string } | null>(null);
+  const galleryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const uid = ctx.user?.id ?? null;
   useEffect(() => { if (ctx.carryPrompt) { setPromptText(ctx.carryPrompt); ctx.setCarryPrompt(""); } loadCollection<{ prompt: string; image: string }[]>("image-history-meta", uid, []).then(setHistory); }, [uid]); // eslint-disable-line
+
+  // Attach a photo (gallery or camera): downscale to max 1024px on the
+  // longest side and compress to JPEG ~0.85 before sending — phone photos
+  // are 3-8 MB and base64 inflates them further, so the raw file never goes up.
+  const attachFile = (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { ctx.toast("Please choose an image file."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = String(reader.result || "");
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const max = 1024;
+          const scale = Math.min(1, max / Math.max(im.width, im.height));
+          const w = Math.max(1, Math.round(im.width * scale));
+          const h = Math.max(1, Math.round(im.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const g = canvas.getContext("2d");
+          if (!g) { ctx.toast("Could not read this image."); return; }
+          g.drawImage(im, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const b64 = dataUrl.split(",")[1] || "";
+          if (!b64 || b64.length > 3000000) { ctx.toast("That image is too large even after compression — try a smaller one."); return; }
+          setAttached({ data: b64, mime: "image/jpeg" });
+        } catch { ctx.toast("Could not read this image."); }
+      };
+      im.onerror = () => ctx.toast("Could not read this image.");
+      im.src = src;
+    };
+    reader.onerror = () => ctx.toast("Could not read this image.");
+    reader.readAsDataURL(file);
+  };
 
   const generate = async () => {
     if (!ctx.user) { ctx.toast("Image Generate is locked for guests — sign up free."); return; }
@@ -474,7 +511,7 @@ export function ImageSection({ ctx }: { ctx: Ctx }) {
     if (!chk.allowed) { setError(chk.error || "Daily image limit reached."); return; }
     setBusy(true); setError(""); setImg("");
     const { api } = await import("@/lib/client");
-    const { json } = await api("/api/ai", { method: "POST", body: JSON.stringify({ action: "image", prompt: promptText }) });
+    const { json } = await api("/api/ai", { method: "POST", body: JSON.stringify({ action: "image", prompt: promptText, ...(attached ? { image: attached } : {}) }) });
     setBusy(false);
     if (json.image) { setImg(json.image); const h = [{ prompt: promptText, image: json.image }, ...history].slice(0, 6); setHistory(h); saveCollection("image-history-meta", uid, h); }
     else setError(String(json.error || "Image generation failed."));
@@ -487,7 +524,20 @@ export function ImageSection({ ctx }: { ctx: Ctx }) {
       <Head title="🎨 Image Generate" sub={ctx.isPro ? "Unlimited." : `Free: ${ctx.usage.images ?? 0}/${ctx.settings.limit_free_images || 3} images today.`} />
       {!ctx.settings.ai_image_configured && <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{ctx.user?.isAdmin ? <>Image service not set up — add the key in <button className="font-bold underline" onClick={() => ctx.goto("api")}>AI Service</button>.</> : <>Image service is being set up — check back soon.</>}</div>}
       <div className="card p-4">
-        <textarea className="inp min-h-20" value={promptText} onChange={(e) => setPromptText(e.target.value)} placeholder="Describe the image — e.g. a bright mobile shop banner, Pakistani market, morning light" />
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost text-sm" onClick={() => galleryRef.current?.click()}>🖼️ Gallery</button>
+          <button className="btn-ghost text-sm" onClick={() => cameraRef.current?.click()}>📷 Camera</button>
+          <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => { attachFile(e.target.files?.[0]); e.target.value = ""; }} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { attachFile(e.target.files?.[0]); e.target.value = ""; }} />
+        </div>
+        <p className="mt-2 text-xs text-violet-300/60">Attach a photo to edit it with your words — or leave it empty to create a new image.</p>
+        {attached && (
+          <div className="relative mt-3 inline-block">
+            <img src={`data:${attached.mime};base64,${attached.data}`} alt="Attached photo" className="max-h-40 rounded-xl" />
+            <button className="absolute -right-2 -top-2 rounded-full bg-red-500 px-2 py-0.5 text-sm text-white" onClick={() => setAttached(null)} title="Remove image">✕</button>
+          </div>
+        )}
+        <textarea className="inp mt-3 min-h-20" value={promptText} onChange={(e) => setPromptText(e.target.value)} placeholder="Describe the image — e.g. a bright mobile shop banner, Pakistani market, morning light" />
         <button disabled={busy} className="btn-primary mt-3" onClick={generate}>{busy ? "Generating real image…" : "Generate Image"}</button>
         {error && <p className="mt-3 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">{error}</p>}
         {img && <div className="mt-4"><img src={img} alt="AI generated" className="w-full rounded-2xl" /><a className="btn-ghost mt-3 inline-block text-sm" href={img} download="nova-image.png">Download image</a></div>}
