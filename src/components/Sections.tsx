@@ -1,10 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { callAI, ls, setLs, loadCollection, saveCollection, download, toCSV, STARTER_PROMPTS } from "@/lib/client";
+import { Markdown } from "./Markdown";
 import type { Ctx } from "./NovaApp";
 
 function Head({ title, sub }: { title: string; sub: string }) {
-  return <div className="mb-5"><h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">{title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
+  // The leading emoji is wrapped at 0.85em with a tight line-height: with the
+  // old inherited 1.5 line-height the emoji's tall glyph box inflated the
+  // title's rendered height to ~48px. Explicit leading + smaller emoji keep
+  // the rendered title at ~28px mobile / ~32px desktop.
+  const sp = title.indexOf(" ");
+  const icon = sp > 0 ? title.slice(0, sp) : "";
+  const rest = sp > 0 ? title.slice(sp + 1) : title;
+  return <div className="mb-4"><h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]">{icon && <span className="text-[0.85em] leading-none">{icon} </span>}{rest}</h1><p className="mt-1 text-[15px] text-violet-200/70">{sub}</p></div>;
 }
 export function NoKeyNotice({ ctx }: { ctx: Ctx }) {
   // Central AI: users never need a key. This notice appears only while the
@@ -16,7 +24,7 @@ export function NoKeyNotice({ ctx }: { ctx: Ctx }) {
 export function LockScreen({ ctx, title, desc, free }: { ctx: Ctx; title: string; desc: string; free?: string }) {
   return (
     <div className="card mx-auto max-w-lg p-8 text-center">
-      <div className="text-5xl">🔒</div>
+      <div className="text-4xl">🔒</div>
       <h2 className="mt-3 text-xl font-extrabold text-white">{title} is a Pro tool</h2>
       <p className="mt-2 text-sm leading-relaxed text-violet-200/75">{desc}</p>
       {free && <p className="mt-2 text-xs text-violet-300/70">{free}</p>}
@@ -151,9 +159,9 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
       <Head title="💬 Chat Bot" sub={ctx.isPro ? "Unlimited chat." : ctx.user ? `Free: ${ctx.usage.chat ?? 0}/${ctx.settings.limit_free_chat || 20} messages today.` : `Guest: ${ctx.guestChat}/${ctx.settings.limit_guest_chat || 5} messages.`} />
       <NoKeyNotice ctx={ctx} />
       <div className="card mb-4 p-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button className="btn-primary px-4 py-2 text-sm" onClick={startNewChat}>+ New Chat</button>
-          <input className="inp flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search chats…" />
+          <input className="inp min-w-0 flex-1" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search chats…" />
           <button className="btn-ghost whitespace-nowrap" onClick={() => setShowChats(!showChats)}>💬 Chats ({chats.length}) {showChats ? "▾" : "▸"}</button>
         </div>
         {showChats && (
@@ -162,7 +170,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
             {visibleChats.map((c) => (
               <div key={c.id} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${c.id === activeId ? "bg-violet-500/25" : "bg-white/[0.04]"}`}>
                 <button className="flex-1 truncate text-left text-sm text-violet-50" onClick={() => { setActiveId(c.id); setShowChats(false); }}>
-                  {c.title} <span className="ml-1 text-[11px] text-violet-300/60">{new Date(c.updatedAt).toLocaleDateString()}</span>
+                  {c.title} <span className="ml-1 text-xs text-violet-300/60">{new Date(c.updatedAt).toLocaleDateString()}</span>
                 </button>
                 <button className="text-violet-200" title="Rename" onClick={() => renameChat(c.id)}>✎</button>
                 <button className="text-red-300" title="Delete chat" onClick={() => deleteChat(c.id)}>🗑</button>
@@ -174,23 +182,23 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
       <div className="card flex min-h-[55vh] flex-col p-4">
         {msgs.length > 0 && (
           <div className="mb-2 flex justify-end">
-            <button onClick={clearChat} className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] text-violet-200 hover:bg-red-500/25">🗑 Clear chat</button>
+            <button onClick={clearChat} className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-violet-200 hover:bg-red-500/25">🗑 Clear chat</button>
           </div>
         )}
         <div className="flex-1 space-y-3 overflow-y-auto">
           {msgs.length === 0 && <div className="py-10 text-center text-sm text-violet-200/60">No messages yet — ask anything.</div>}
           {msgs.map((m, i) => (
             <div key={i} className={m.role === "user" ? "text-right" : ""}>
-              <div dir={isUrduText(m.content) ? "rtl" : undefined} className={`inline-block max-w-[92%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%] ${isUrduText(m.content) ? "text-right" : "text-left"} ${m.role === "user" ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-50"}`}>{m.content}</div>
+              <div dir={isUrduText(m.content) ? "rtl" : undefined} className={`inline-block max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%] ${isUrduText(m.content) ? "text-right" : "text-left"} ${m.role === "user" ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-50"}`}>{m.role === "assistant" ? <Markdown text={m.content} /> : <span className="whitespace-pre-wrap">{m.content}</span>}</div>
               {m.role === "user" && (
                 <div className="mt-1.5 flex justify-end">
-                  <button onClick={() => delMsg(i)} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-violet-200 hover:bg-red-500/25">🗑 Delete</button>
+                  <button onClick={() => delMsg(i)} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-violet-200 hover:bg-red-500/25">🗑 Delete</button>
                 </div>
               )}
               {m.role === "assistant" && !m.content.startsWith("⚠️") && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {[["copy", "📋 Copy"], ["read", "🔊 Read aloud"], ["regen", "🔄 Regenerate"], ["prompt", "⚡ Save as Prompt"], ["create", "🛠️ Open in Create"], ["image", "🎨 Generate Image"], ["del", "🗑 Delete"]].map(([a, l]) => (
-                    <button key={a} onClick={() => act(m, a, i)} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-violet-200 hover:bg-violet-500/25">{l}</button>
+                    <button key={a} onClick={() => act(m, a, i)} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-violet-200 hover:bg-violet-500/25">{l}</button>
                   ))}
                 </div>
               )}
@@ -205,7 +213,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
           </div>
         ) : (
           <div className="mt-4 flex gap-2">
-            <input className="inp flex-1" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Type your message…" />
+            <input className="inp min-w-0 flex-1" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Type your message…" />
             <button className="btn-primary px-5" onClick={() => send()}>Send</button>
           </div>
         )}
@@ -219,7 +227,7 @@ export function ChatSection({ ctx }: { ctx: Ctx }) {
             if (/key|password|card|cvc|pin/i.test(v)) { ctx.toast("⚠️ Never store passwords or API keys in Memory — not saved."); return; }
             const n = [...memory, v]; setMemory(n); saveCollection("memory", uid, n); setMemInput("");
           }}>Save fact</button></div>
-          <p className="mt-2 text-[11px] text-violet-300/50">Never store passwords or API keys here.</p>
+          <p className="mt-2 text-xs text-violet-300/50">Never store passwords or API keys here.</p>
         </div>}
       </div>
     </div>
@@ -280,7 +288,7 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
             <div className="flex items-start gap-2"><p className="flex-1 font-bold text-white">{p.name}</p>
               <button onClick={() => { const n = [...items]; n[i] = { ...p, starred: !p.starred }; persist(n); }}>{p.starred ? "⭐" : "☆"}</button></div>
             <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-violet-200/70">{p.body}</p>
-            <p className="mt-2 text-[11px] text-violet-300/60">{p.category} · variables: {p.vars.length ? p.vars.map((v) => `{{${v}}}`).join(", ") : "none"}</p>
+            <p className="mt-2 text-xs text-violet-300/60">{p.category} · variables: {p.vars.length ? p.vars.map((v) => `{{${v}}}`).join(", ") : "none"}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <button disabled={guestsViewOnly} className="btn-primary px-3 py-1.5 text-xs disabled:opacity-40" onClick={() => { setValues({}); setFillFor(p); }}>Run…</button>
               <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => setEditor({ ...p })}>Edit</button>
@@ -315,7 +323,7 @@ export function PromptsSection({ ctx }: { ctx: Ctx }) {
             <label className="lbl mt-3">Name</label><input className="inp" value={editor.name} onChange={(e) => setEditor({ ...editor, name: e.target.value })} />
             <label className="lbl mt-3">Category</label><input className="inp" value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} />
             <label className="lbl mt-3">Prompt body — use {"{{variables}}"}</label><textarea className="inp min-h-28" value={editor.body} onChange={(e) => { const vars = [...new Set([...e.target.value.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]))]; setEditor({ ...editor, body: e.target.value, vars }); }} />
-            <p className="mt-1 text-[11px] text-violet-300/60">Detected variables: {editor.vars.join(", ") || "none"}</p>
+            <p className="mt-1 text-xs text-violet-300/60">Detected variables: {editor.vars.join(", ") || "none"}</p>
             <div className="mt-4 flex gap-2"><button className="btn-primary flex-1" onClick={() => { if (!editor.name.trim() || !editor.body.trim()) { ctx.toast("Name and body are required."); return; } const idx = items.findIndex((x) => x.name === editor.name); if (idx >= 0) { const n = [...items]; n[idx] = editor; persist(n); } else persist([editor, ...items]); setEditor(null); }}>Save Prompt</button><button className="btn-ghost" onClick={() => setEditor(null)}>Cancel</button></div>
           </div>
         </div>
@@ -386,7 +394,7 @@ export function CreateSection({ ctx }: { ctx: Ctx }) {
             {current.kind === "website"
               ? <iframe title="preview" className="mt-3 h-[480px] w-full rounded-xl bg-white" sandbox="allow-scripts" srcDoc={current.content} />
               : <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-black/40 p-4 text-xs text-violet-100">{current.content}</pre>}
-            {current.versions.length > 0 && <p className="mt-2 text-[11px] text-violet-300/60">{current.versions.length} older version(s) kept. <button className="underline" onClick={() => { const v = current.versions[0]; const n = { ...current, content: v, versions: current.versions.slice(1) }; setCurrent(n); persist(projects.map((p) => p.id === n.id ? n : p)); }}>Restore latest older version</button></p>}
+            {current.versions.length > 0 && <p className="mt-2 text-xs text-violet-300/60">{current.versions.length} older version(s) kept. <button className="underline" onClick={() => { const v = current.versions[0]; const n = { ...current, content: v, versions: current.versions.slice(1) }; setCurrent(n); persist(projects.map((p) => p.id === n.id ? n : p)); }}>Restore latest older version</button></p>}
           </div>
         )}
       </div>
@@ -497,7 +505,7 @@ export function DeploySection({ ctx }: { ctx: Ctx }) {
           <div className="flex items-center gap-2"><h3 className="flex-1 font-extrabold text-white">📲 App Install checks (live)</h3><button className="btn-ghost px-3 py-1.5 text-xs" disabled={busy} onClick={runChecks}>{busy ? "Checking…" : "Re-run"}</button></div>
           <div className="mt-3 space-y-2">{checks.map((c, i) => <div key={i} className="flex items-center gap-3 rounded-xl bg-black/25 px-3 py-2 text-sm"><span>{c.ok === null ? "⏳" : c.ok ? "✅" : "❌"}</span><span className="flex-1 text-violet-50">{c.label}</span><span className="text-xs text-violet-300/70">{c.detail}</span></div>)}</div>
           <button className="btn-primary mt-4 w-full" onClick={install}>Install App</button>
-          <p className="mt-2 text-[11px] text-violet-300/60">Works offline after the first visit.</p>
+          <p className="mt-2 text-xs text-violet-300/60">Works offline after the first visit.</p>
         </div>
         <div className="card p-5">
           <h3 className="font-extrabold text-white">📦 Project publish</h3>

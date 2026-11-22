@@ -44,8 +44,8 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">💎 Pricing & Upgrade</h1>
-      <p className="mt-1 text-sm text-violet-200/70">Manual approval only — no card checkout. The owner confirms every payment.</p>
+      <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">💎 </span>Pricing &amp; Upgrade</h1>
+      <p className="mt-1 text-[15px] text-violet-200/70">Manual approval only — no card checkout. The owner confirms every payment.</p>
 
       {ctx.user?.effectivePlan === "pro" && <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">✦ You are <b>Pro</b> — active until <b>{fmtDate(ctx.user.proUntil)}</b>. Renew below to extend from that date.</div>}
       {ctx.user?.proExpired && <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">Your Pro expired on {fmtDate(ctx.user.proUntil)} — renew below to unlock Pro tools again. Your data is intact.</div>}
@@ -57,7 +57,7 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
           <h3 className="text-lg font-extrabold text-white">Pro ✦</h3>
           <div className="mt-2 flex gap-2">{(["monthly", "yearly"] as const).map((p) => <button key={p} onClick={() => setPlanType(p)} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-bold ${planType === p ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{p === "monthly" ? `Monthly — PKR ${s.price_monthly_pkr || "500"} (~$${s.price_monthly_usd || "1.8"})` : `Yearly — PKR ${s.price_yearly_pkr || "4000"} (~$${s.price_yearly_usd || "14"})`}</button>)}</div>
           <ul className="mt-3 space-y-1.5 text-sm text-violet-100">{rows.map((r) => <li key={r[0]}>✦ {r[0]}: {r[2]}</li>)}</ul>
-          <p className="mt-2 text-[11px] text-violet-300/60">“Unlimited” still depends on the AI provider&apos;s quota.</p>
+          <p className="mt-2 text-xs text-violet-300/60">“Unlimited” still depends on the AI provider&apos;s quota.</p>
         </div>
       </div>
 
@@ -90,15 +90,15 @@ export function PricingPage({ ctx }: { ctx: Ctx }) {
               <label className="lbl mt-4">I have a license key</label><input className="inp" value={license} onChange={(e) => setLicense(e.target.value)} placeholder="XXXX-XXXX-XXXX" />
               {licMsg && <p className="mt-2 rounded-xl bg-white/[0.06] px-3 py-2 text-sm text-violet-50">{licMsg}</p>}
               <button disabled={busy} className="btn-primary mt-3 w-full" onClick={verifyLicense}>{busy ? "Verifying with Gumroad…" : "Verify & Activate Pro"}</button>
-              <p className="mt-2 text-[11px] text-violet-300/60">Verified live with Gumroad&apos;s API.</p>
+              <p className="mt-2 text-xs text-violet-300/60">Verified live with Gumroad&apos;s API.</p>
             </div>
 
             <div className="card mt-4 p-5">
               <h3 className="font-extrabold text-white">My upgrade requests</h3>
               {history.length === 0 && <p className="mt-2 text-sm text-violet-200/60">No requests yet.</p>}
               {history.map((r) => <div key={r.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-black/25 px-3 py-2 text-sm"><span className="flex-1 capitalize text-violet-50">{r.method} · {r.planType} · {new Date(r.createdAt).toLocaleString()}</span>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${r.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : r.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>{r.status === "approved" ? "Approved" : r.status === "rejected" ? "Rejected" : "Pending owner approval"}</span></div>)}
-              <p className="mt-2 text-[11px] text-violet-300/60">Only the owner confirms payment by approving.</p>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${r.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : r.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>{r.status === "approved" ? "Approved" : r.status === "rejected" ? "Rejected" : "Pending owner approval"}</span></div>)}
+              <p className="mt-2 text-xs text-violet-300/60">Only the owner confirms payment by approving.</p>
             </div>
           </div>
         </div>
@@ -135,10 +135,10 @@ export function AdminPage({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🛡️ Admin Panel <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
-      <p className="mt-1 text-sm text-violet-200/70">Only the Admin email sees this.</p>
+      <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">🛡️ </span>Admin Panel <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
+      <p className="mt-1 text-[15px] text-violet-200/70">Only the Admin email sees this.</p>
       {msg && <p className="mt-3 rounded-xl bg-violet-500/15 px-3 py-2 text-sm text-violet-50">{msg}</p>}
-      <div className="mt-4 flex gap-1.5">{[["requests", `Upgrade Requests (${pending.length} pending)`], ["users", "Users"], ["settings", "Settings"], ["setup", "Owner Setup"]].map(([t, l]) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === t ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
+      <div className="mt-4 flex flex-wrap gap-1.5">{[["requests", `Upgrade Requests (${pending.length} pending)`], ["users", "Users"], ["settings", "Settings"], ["setup", "Owner Setup"]].map(([t, l]) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === t ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
 
       {tab === "requests" && <div className="card mt-4 p-4">
         {pending.length === 0 && <p className="text-sm text-violet-200/60">No pending requests.</p>}
@@ -239,8 +239,8 @@ export function AiServiceSection({ ctx }: { ctx: Ctx }) {
 
   return (
     <div>
-      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🔑 AI Service <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
-      <p className="mt-1 text-sm leading-relaxed text-violet-200/70">One central key powers the whole app. Users never see a key — they just sign up and use Novster. Keys stay <b>only on the server</b> (shown masked here).</p>
+      <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">🔑 </span>AI Service <span className="text-sm font-semibold text-violet-300/70">(owner only)</span></h1>
+      <p className="mt-1 text-[15px] leading-relaxed text-violet-200/70">One central key powers the whole app. Users never see a key — they just sign up and use Novster. Keys stay <b>only on the server</b> (shown masked here).</p>
 
       <div className="card mt-4 p-4 text-sm">
         <p className="text-violet-50">💬 Chat AI: {info.chatConfigured ? <span className="font-bold text-emerald-300">Configured ✓</span> : <span className="font-bold text-amber-300">Not configured</span>}{info.chatConfigured && <span className="text-violet-300/70"> · Key: {info.chatMasked} · Model: {info.chatModel}</span>}</p>
@@ -276,7 +276,7 @@ export function AiServiceSection({ ctx }: { ctx: Ctx }) {
         <h3 className="font-extrabold text-white">Protection</h3>
         <label className="lbl mt-2">Global daily AI cap (all users combined — protects your key; you as Admin are exempt)</label>
         <input className="inp max-w-xs" type="number" min="0" value={cap} onChange={(e) => setCap(e.target.value)} />
-        <p className="mt-2 text-[11px] leading-relaxed text-violet-300/60">Free provider quotas are small. At the cap, users see an honest &quot;limit reached&quot; message. Plan limits apply on top.</p>
+        <p className="mt-2 text-xs leading-relaxed text-violet-300/60">Free provider quotas are small. At the cap, users see an honest &quot;limit reached&quot; message. Plan limits apply on top.</p>
         <button disabled={busy} className="btn-primary mt-4" onClick={save}>{busy ? "Saving…" : "Save AI Service"}</button>
       </div>
     </div>

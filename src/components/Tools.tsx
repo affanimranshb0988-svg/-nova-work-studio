@@ -21,8 +21,8 @@ const TOOLS: ToolDef[] = [
 export function ToolsHub({ ctx }: { ctx: Ctx }) {
   const [open, setOpen] = useState<string | null>(null);
   if (!ctx.user) {
-    return <div><h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🧰 Tools</h1><p className="mt-1 text-sm text-violet-200/70">10 daily-use tools. Most are Pro.</p>
-      <div className="card mx-auto mt-6 max-w-lg p-8 text-center"><p className="text-5xl">🔒</p><h2 className="mt-3 text-xl font-extrabold text-white">Tools are locked for guests</h2><p className="mt-2 text-sm text-violet-200/75">Create a free account to use the free tools and see Pro tools.</p><button className="btn-primary mt-5 w-full" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
+    return <div><h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">🧰 </span>Tools</h1><p className="mt-1 text-[15px] text-violet-200/70">10 daily-use tools. Most are Pro.</p>
+      <div className="card mx-auto mt-6 max-w-lg p-8 text-center"><p className="text-4xl">🔒</p><h2 className="mt-3 text-xl font-extrabold text-white">Tools are locked for guests</h2><p className="mt-2 text-sm text-violet-200/75">Create a free account to use the free tools and see Pro tools.</p><button className="btn-primary mt-5 w-full" onClick={() => window.location.reload()}>Sign up / Log in</button></div></div>;
   }
   if (open) {
     const back = () => setOpen(null);
@@ -36,13 +36,13 @@ export function ToolsHub({ ctx }: { ctx: Ctx }) {
   }
   return (
     <div>
-      <h1 className="text-[28px] font-extrabold tracking-tight text-white sm:text-4xl">🧰 Tools</h1>
-      <p className="mt-1 text-sm text-violet-200/70">{ctx.isPro ? "All 10 tools unlocked." : "Free tools have daily limits · PRO tools are locked."}</p>
+      <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">🧰 </span>Tools</h1>
+      <p className="mt-1 text-[15px] text-violet-200/70">{ctx.isPro ? "All 10 tools unlocked." : "Free tools have daily limits · PRO tools are locked."}</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {TOOLS.map((t) => (
           <button key={t.id} onClick={() => setOpen(t.id)} className="card p-5 text-left transition hover:ring-2 hover:ring-violet-500/50">
             <div className="flex items-start gap-3"><span className="text-3xl">{t.icon}</span>
-              <span className={`ml-auto rounded-full px-2.5 py-1 text-[10px] font-extrabold ${t.tag === "PRO" ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white" : "bg-emerald-500/20 text-emerald-300"}`}>{t.tag}</span></div>
+              <span className={`ml-auto rounded-full px-2.5 py-1 text-xs font-extrabold ${t.tag === "PRO" ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white" : "bg-emerald-500/20 text-emerald-300"}`}>{t.tag}</span></div>
             <p className="mt-2 font-bold text-white">{t.name}</p><p className="mt-1 text-xs leading-relaxed text-violet-200/70">{t.benefit}</p>
             {t.tag === "PRO" && !ctx.isPro && <p className="mt-2 text-xs font-semibold text-fuchsia-300">🔒 Locked — tap to see Upgrade</p>}
           </button>
@@ -53,7 +53,7 @@ export function ToolsHub({ ctx }: { ctx: Ctx }) {
 }
 
 function THead({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-  return <div className="mb-4"><h1 className="text-[28px] font-extrabold tracking-tight text-white">{icon} {title}</h1><p className="mt-1 text-sm text-violet-200/70">{sub}</p></div>;
+  return <div className="mb-4"><h1 className="text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]"><span className="text-[0.85em] leading-none">{icon} </span>{title}</h1><p className="mt-1 text-[15px] text-violet-200/70">{sub}</p></div>;
 }
 const LangPicker = ({ lang, setLang }: { lang: string; setLang: (s: string) => void }) => (
   <div className="flex gap-1.5">{["English", "Urdu", "Roman Urdu"].map((l) => <button key={l} onClick={() => setLang(l)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${lang === l ? "bg-violet-600 text-white" : "bg-white/[0.06] text-violet-200"}`}>{l}</button>)}</div>
@@ -128,7 +128,7 @@ function InvoiceTool({ ctx }: { ctx: Ctx }) {
           <button className="btn-ghost mt-2 text-xs" onClick={() => setItems([...items, { name: "", qty: 1, rate: 0 }])}>+ Add item</button>
           <div className="mt-3 grid grid-cols-2 gap-2"><div><label className="lbl">Discount (Rs)</label><input className="inp" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} /></div>
           <div><label className="lbl">Tax %</label><input className="inp" type="number" value={tax} onChange={(e) => setTax(Number(e.target.value))} /></div></div>
-          <div className="mt-3 rounded-xl bg-black/30 p-3 text-sm text-violet-100">Subtotal: <b>{money(preview.sub)}</b> · Discount: −{money(discount)} · Tax: {tax}%<br /><span className="text-base font-extrabold text-white">Total: {money(preview.total)}</span> <span className="text-[11px] text-violet-300/60">(calculated in code)</span></div>
+          <div className="mt-3 rounded-xl bg-black/30 p-3 text-sm text-violet-100">Subtotal: <b>{money(preview.sub)}</b> · Discount: −{money(discount)} · Tax: {tax}%<br /><span className="text-base font-extrabold text-white">Total: {money(preview.total)}</span> <span className="text-xs text-violet-300/60">(calculated in code)</span></div>
           <button className="btn-primary mt-3 w-full" onClick={createInvoice}>Save Invoice + Add to Khata</button>
         </div>
       </div>
@@ -197,7 +197,7 @@ function SocialTool({ ctx }: { ctx: Ctx }) {
         <div className="flex items-center gap-2"><span className="rounded-full bg-violet-600 px-2.5 py-0.5 text-xs font-bold text-white">Day {d.day}</span>{d.done && <span className="text-xs font-bold text-emerald-300">DONE ✓</span>}
           <button className="ml-auto text-xs text-violet-300 underline" disabled={!!busy} onClick={() => regenDay(d)}>{busy === `d${d.day}` ? "…" : "Regenerate"}</button></div>
         <p className="mt-2 text-sm font-semibold text-white">{d.idea}</p><p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-violet-200/80" dir={lang === "Urdu" ? "rtl" : "ltr"}>{d.caption}</p>
-        <p className="mt-1 text-[11px] text-fuchsia-300/80">{d.hashtags}</p>
+        <p className="mt-1 text-xs text-fuchsia-300/80">{d.hashtags}</p>
         <button className={`mt-3 w-full rounded-xl py-2 text-xs font-bold ${d.done ? "bg-white/[0.07] text-violet-100" : "bg-emerald-600 text-white"}`} onClick={() => persist(days.map((x) => x.day === d.day ? { ...x, done: !x.done } : x))}>{d.done ? "Mark not done" : "Mark Done"}</button>
       </div>))}</div></div>;
 }

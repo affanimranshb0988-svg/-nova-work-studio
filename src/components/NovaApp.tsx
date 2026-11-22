@@ -104,7 +104,7 @@ export default function NovaApp() {
           {NAV.filter((n) => n.id !== "api" || user?.isAdmin).map((n, i) => (
             <button key={n.id} onClick={() => goto(n.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${section === n.id ? "bg-violet-600 text-white shadow-lg shadow-violet-950/40" : "text-violet-100/75 hover:bg-violet-500/10 hover:text-white"}`}>
               <span>{n.icon}</span><span className="flex-1">{i + 1}. {n.label}</span>
-              {n.id === "tools" && <span className="rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">10 TOOLS</span>}
+              {n.id === "tools" && <span className="rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-xs font-bold text-fuchsia-300">10 TOOLS</span>}
             </button>
           ))}
         </nav>
@@ -116,7 +116,7 @@ export default function NovaApp() {
           </div>
         )}
         {isPro && user?.proUntil && <div className="mx-3 mb-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-xs text-emerald-200">✦ Pro active until {fmtDate(user.proUntil)}</div>}
-        <p className="px-5 pb-4 text-[11px] text-violet-300/40">Powered by Novster&apos;s built-in AI — no keys needed.</p>
+        <p className="px-5 pb-4 text-xs text-violet-300/40">Powered by Novster&apos;s built-in AI — no keys needed.</p>
       </aside>
       {menuOpen && <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setMenuOpen(false)} />}
 
@@ -192,8 +192,8 @@ export function AuthScreen({ onAuthed, onGuest }: { onAuthed: (u: SafeUser) => v
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-4xl text-white shadow-xl shadow-violet-950/60">✦</div>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white">Novster Work Studio <span className="text-violet-400">2.0</span></h1>
-          <p className="mt-2 text-sm text-violet-200/70">Chat, tools, invoices, CVs & more — AI built in.</p>
+          <h1 className="mt-4 text-[28px] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[32px]">Novster Work Studio <span className="text-violet-400">2.0</span></h1>
+          <p className="mt-2 text-[15px] text-violet-200/70">Chat, tools, invoices, CVs & more — AI built in.</p>
         </div>
         <div className="card p-6">
           <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-black/30 p-1">
@@ -210,7 +210,7 @@ export function AuthScreen({ onAuthed, onGuest }: { onAuthed: (u: SafeUser) => v
           <div className="my-4 flex items-center gap-3 text-xs text-violet-300/50"><span className="h-px flex-1 bg-violet-500/20" />or<span className="h-px flex-1 bg-violet-500/20" /></div>
           <button disabled className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-violet-200/50" title="Owner must enable Google provider">Continue with Google — not enabled yet</button>
           <button onClick={onGuest} className="mt-3 w-full py-2 text-sm font-semibold text-violet-200 underline">Continue as guest →</button>
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-violet-300/50">Passwords are hashed on the server. No API keys needed — AI is built in.</p>
+          <p className="mt-4 text-center text-xs leading-relaxed text-violet-300/50">Passwords are hashed on the server. No API keys needed — AI is built in.</p>
         </div>
       </div>
     </div>
